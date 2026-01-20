@@ -46,27 +46,59 @@ class Meeting {
   DateTime get endTime => startTime.add(Duration(minutes: durationMinutes));
   
   factory Meeting.fromJson(Map<String, dynamic> json) {
+    // Создаем минимальный Place если его нет
+    final place = json['place'] != null 
+        ? Place.fromJson(json['place'] as Map<String, dynamic>)
+        : Place(
+            id: '0',
+            name: json['place_name'] as String? ?? 'Не указано',
+            address: json['address'] as String? ?? '',
+            latitude: 0,
+            longitude: 0,
+          );
+    
+    // Создаем минимального User если его нет
+    final creator = json['creator'] != null
+        ? User.fromJson(json['creator'] as Map<String, dynamic>)
+        : User(
+            id: json['organizer_id']?.toString() ?? '0',
+            email: '',
+            name: json['organizer_name'] as String? ?? 'Организатор',
+            createdAt: DateTime.now(),
+          );
+    
     return Meeting(
-      id: json['id'] as String,
+      id: json['id'].toString(),
       title: json['title'] as String,
-      description: json['description'] as String,
-      category: json['category'] as String,
-      place: Place.fromJson(json['place'] as Map<String, dynamic>),
-      startTime: DateTime.parse(json['startTime'] as String),
-      durationMinutes: json['durationMinutes'] as int,
-      maxParticipants: json['maxParticipants'] as int,
-      participants: (json['participants'] as List<dynamic>)
-          .map((e) => User.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      creator: User.fromJson(json['creator'] as Map<String, dynamic>),
+      description: json['description'] as String? ?? '',
+      category: json['category'] as String? ?? 'Другое',
+      place: place,
+      startTime: json['start_time'] != null 
+          ? DateTime.parse(json['start_time'] as String)
+          : DateTime.now(),
+      durationMinutes: json['duration'] as int? ?? 
+          (json['end_time'] != null && json['start_time'] != null
+              ? DateTime.parse(json['end_time'] as String)
+                  .difference(DateTime.parse(json['start_time'] as String))
+                  .inMinutes
+              : 60),
+      maxParticipants: json['max_participants'] as int? ?? json['maxParticipants'] as int? ?? 10,
+      participants: json['participants'] is List
+          ? (json['participants'] as List<dynamic>)
+              .map((e) => User.fromJson(e as Map<String, dynamic>))
+              .toList()
+          : [],
+      creator: creator,
       status: MeetingStatus.values.firstWhere(
-        (e) => e.name == json['status'],
-        orElse: () => MeetingStatus.upcoming,
+        (e) => e.name == (json['status'] as String? ?? 'active'),
+        orElse: () => MeetingStatus.active,
       ),
-      isPrivate: json['isPrivate'] as bool? ?? false,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'] as String)
+      isPrivate: json['isPrivate'] as bool? ?? json['is_private'] as bool? ?? false,
+      createdAt: json['created_at'] != null 
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'] as String)
           : null,
     );
   }

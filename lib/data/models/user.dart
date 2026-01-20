@@ -23,19 +23,21 @@ class User {
   
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
-      id: json['id'] as String,
+      id: json['id'].toString(),
       email: json['email'] as String,
       phone: json['phone'] as String?,
       name: json['name'] as String,
-      avatarUrl: json['avatarUrl'] as String?,
+      avatarUrl: json['avatar_url'] as String?,
       bio: json['bio'] as String?,
       interests: (json['interests'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           [],
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'] as String)
+      createdAt: json['created_at'] != null 
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'] as String)
           : null,
     );
   }

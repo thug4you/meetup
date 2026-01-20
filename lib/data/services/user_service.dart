@@ -11,7 +11,7 @@ class UserService {
   // Получить профиль пользователя
   Future<User> getUserProfile(String userId) async {
     try {
-      final response = await _apiService.get('/users/$userId');
+      final response = await _apiService.get('/api/users/$userId');
       return User.fromJson(response.data);
     } on DioException catch (e) {
       throw _handleError(e);
@@ -21,7 +21,7 @@ class UserService {
   // Получить текущего пользователя
   Future<User> getCurrentUser() async {
     try {
-      final response = await _apiService.get('/users/me');
+      final response = await _apiService.get('/api/users/me');
       return User.fromJson(response.data);
     } on DioException catch (e) {
       throw _handleError(e);
@@ -42,7 +42,7 @@ class UserService {
       if (avatarUrl != null) data['avatarUrl'] = avatarUrl;
       if (interests != null) data['interests'] = interests;
 
-      final response = await _apiService.put('/users/me', data: data);
+      final response = await _apiService.put('/api/users/me', data: data);
       return User.fromJson(response.data);
     } on DioException catch (e) {
       throw _handleError(e);
@@ -53,7 +53,7 @@ class UserService {
   Future<List<Meeting>> getCreatedMeetings(String userId, {int page = 1, int limit = 20}) async {
     try {
       final response = await _apiService.get(
-        '/users/$userId/meetings/created',
+        '/api/users/$userId/meetings/created',
         queryParameters: {
           'page': page,
           'limit': limit,
@@ -71,7 +71,7 @@ class UserService {
   Future<List<Meeting>> getJoinedMeetings(String userId, {int page = 1, int limit = 20}) async {
     try {
       final response = await _apiService.get(
-        '/users/$userId/meetings/joined',
+        '/api/users/$userId/meetings/joined',
         queryParameters: {
           'page': page,
           'limit': limit,
@@ -92,7 +92,7 @@ class UserService {
         'avatar': await MultipartFile.fromFile(filePath),
       });
 
-      final response = await _apiService.post('/users/me/avatar', data: formData);
+      final response = await _apiService.post('/api/users/me/avatar', data: formData);
       return response.data['avatarUrl'] as String;
     } on DioException catch (e) {
       throw _handleError(e);

@@ -29,7 +29,7 @@ class MeetingService {
       if (radius != null) queryParams['radius'] = radius;
 
       final response = await _apiService.get(
-        '/meetings',
+        '/api/meetings',
         queryParameters: queryParams,
       );
 
@@ -43,7 +43,7 @@ class MeetingService {
   // Получить детали встречи
   Future<Meeting> getMeetingById(String id) async {
     try {
-      final response = await _apiService.get('/meetings/$id');
+      final response = await _apiService.get('/api/meetings/$id');
       return Meeting.fromJson(response.data);
     } on DioException catch (e) {
       throw _handleError(e);
@@ -63,7 +63,7 @@ class MeetingService {
   }) async {
     try {
       final response = await _apiService.post(
-        '/meetings',
+        '/api/meetings',
         data: {
           'title': title,
           'description': description,
@@ -162,7 +162,7 @@ class MeetingService {
       if (radius != null) queryParams['radius'] = radius;
 
       final response = await _apiService.get(
-        '/places/search',
+        '/api/places/search',
         queryParameters: queryParams,
       );
 

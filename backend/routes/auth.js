@@ -1,0 +1,101 @@
+const express = require('express');
+const router = express.Router();
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const pool = require('../config/database');
+
+// Регистрация
+router.post('/register', async (req, res) => {
+  try {
+    const { email, password, name } = req.body;
+
+    // Проверка существования пользователя
+    const userExists = await pool.query(
+      'SELECT * FROM users WHERE email = $1',
+      [email]
+    );
+
+    if (userExists.rows.length > 0) {
+      return res.status(400).json({ error: 'Пользователь уже существует' });
+    }
+
+    // Хеширование пароля
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Создание пользователя
+    const result = await pool.query(
+      'INSERT INTO users (email, password, name) VALUES ($1, $2, $3) RETURNING id, email, name, created_at',
+      [email, hashedPassword, name]
+    );
+
+    const user = result.rows[0];
+
+    // Создание токена
+    const token = jwt.sign(
+      { userId: user.id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    res.status(201).json({
+      message: 'Регистрация успешна',
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Вход
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Поиск пользователя
+    const result = await pool.query(
+      'SELECT * FROM users WHERE email = $1',
+      [email]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'Неверный email или пароль' });
+    }
+
+    const user = result.rows[0];
+
+    // Проверка пароля
+    const validPassword = await bcrypt.compare(password, user.password);
+    
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Неверный email или пароль' });
+    }
+
+    // Создание токена
+    const token = jwt.sign(
+      { userId: user.id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    res.json({
+      message: 'Вход выполнен успешно',
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatar_url: user.avatar_url,
+        bio: user.bio
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+module.exports = router;

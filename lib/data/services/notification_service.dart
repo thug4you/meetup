@@ -14,7 +14,7 @@ class NotificationService {
   }) async {
     try {
       final response = await _apiService.get(
-        '/notifications',
+        '/api/notifications',
         queryParameters: {
           'page': page,
           'limit': limit,
@@ -38,7 +38,7 @@ class NotificationService {
   // Получить количество непрочитанных уведомлений
   Future<int> getUnreadCount() async {
     try {
-      final response = await _apiService.get('/notifications/unread-count');
+      final response = await _apiService.get('/api/notifications/unread-count');
       
       if (response.data != null && response.data['count'] != null) {
         return response.data['count'] as int;

@@ -46,7 +46,7 @@ class AuthService {
   }) async {
     try {
       final response = await _apiService.post(
-        '/auth/register',
+        '/api/auth/register',
         data: {
           'name': name,
           'email': email,
@@ -87,7 +87,7 @@ class AuthService {
   }) async {
     try {
       final response = await _apiService.post(
-        '/auth/login',
+        '/api/auth/login',
         data: {
           'email': email,
           'password': password,
@@ -123,7 +123,7 @@ class AuthService {
     try {
       // Отправляем запрос на сервер для инвалидации токена
       if (token != null) {
-        await _apiService.post('/auth/logout');
+        await _apiService.post('/api/auth/logout');
       }
     } catch (e) {
       // Игнорируем ошибки при выходе
@@ -146,7 +146,7 @@ class AuthService {
       }
 
       final response = await _apiService.post(
-        '/auth/refresh',
+        '/api/auth/refresh',
         data: {'refreshToken': refreshToken},
       );
 
@@ -171,7 +171,7 @@ class AuthService {
       final userId = _prefs.getString(AppConstants.userIdKey);
       if (userId == null) return null;
 
-      final response = await _apiService.get('/users/$userId');
+      final response = await _apiService.get('/api/users/$userId');
       
       if (response.statusCode == 200) {
         final user = User.fromJson(response.data as Map<String, dynamic>);
