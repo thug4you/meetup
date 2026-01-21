@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../providers/meeting_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/meeting_card.dart';
 import 'package:flutter_application_1/presentation/screens/meeting/meeting_detail_screen.dart';
 
@@ -15,6 +16,8 @@ class MeetingsFeedScreen extends StatefulWidget {
 
 class _MeetingsFeedScreenState extends State<MeetingsFeedScreen> {
   final ScrollController _scrollController = ScrollController();
+  String _sortOrder = 'newest'; // 'newest' или 'oldest'
+  bool _excludeMyMeetings = true; // Изначально исключаем свои встречи
 
   @override
   void initState() {
@@ -24,21 +27,12 @@ class _MeetingsFeedScreenState extends State<MeetingsFeedScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<MeetingProvider>().loadMeetings(refresh: true);
     });
-    
-    // Подгружать больше при прокрутке
-    _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
-  }
-
-  void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
-      context.read<MeetingProvider>().loadMeetings();
-    }
   }
 
   Future<void> _onRefresh() async {
@@ -52,7 +46,16 @@ class _MeetingsFeedScreenState extends State<MeetingsFeedScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => const _FiltersBottomSheet(),
+      builder: (context) => _FiltersBottomSheet(
+        currentSortOrder: _sortOrder,
+        excludeMyMeetings: _excludeMyMeetings,
+        onSortOrderChanged: (order) {
+          setState(() => _sortOrder = order);
+        },
+        onExcludeMyMeetingsChanged: (value) {
+          setState(() => _excludeMyMeetings = value);
+        },
+      ),
     );
   }
 
@@ -143,23 +146,32 @@ class _MeetingsFeedScreenState extends State<MeetingsFeedScreen> {
           }
 
           // Показать список встреч
+          var filteredMeetings = List.from(provider.meetings);
+          
+          // Фильтр: исключить мои встречи
+          if (_excludeMyMeetings) {
+            final authProvider = context.read<AuthProvider>();
+            final currentUserId = authProvider.currentUser?.id;
+            if (currentUserId != null) {
+              filteredMeetings = filteredMeetings.where((m) => m.creator.id != currentUserId).toList();
+            }
+          }
+          
+          // Сортировка
+          if (_sortOrder == 'oldest') {
+            filteredMeetings.sort((a, b) => a.startTime.compareTo(b.startTime));
+          } else {
+            filteredMeetings.sort((a, b) => b.startTime.compareTo(a.startTime));
+          }
+
           return RefreshIndicator(
             onRefresh: _onRefresh,
             child: ListView.builder(
               controller: _scrollController,
               padding: const EdgeInsets.only(top: 8, bottom: 80),
-              itemCount: provider.meetings.length + (provider.hasMore ? 1 : 0),
+              itemCount: filteredMeetings.length,
               itemBuilder: (context, index) {
-                if (index >= provider.meetings.length) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: CircularProgressIndicator(),
-                    ),
-                  );
-                }
-
-                final meeting = provider.meetings[index];
+                final meeting = filteredMeetings[index];
                 return MeetingCard(
                   meeting: meeting,
                   onTap: () {
@@ -214,7 +226,17 @@ class _MeetingsFeedScreenState extends State<MeetingsFeedScreen> {
 
 // Модальное окно фильтров
 class _FiltersBottomSheet extends StatefulWidget {
-  const _FiltersBottomSheet();
+  final String currentSortOrder;
+  final bool excludeMyMeetings;
+  final Function(String) onSortOrderChanged;
+  final Function(bool) onExcludeMyMeetingsChanged;
+
+  const _FiltersBottomSheet({
+    required this.currentSortOrder,
+    required this.excludeMyMeetings,
+    required this.onSortOrderChanged,
+    required this.onExcludeMyMeetingsChanged,
+  });
 
   @override
   State<_FiltersBottomSheet> createState() => _FiltersBottomSheetState();
@@ -223,6 +245,9 @@ class _FiltersBottomSheet extends StatefulWidget {
 class _FiltersBottomSheetState extends State<_FiltersBottomSheet> {
   String? _selectedCategory;
   double _radius = 5.0;
+  bool _useRadiusFilter = false; // Галочка для радиуса
+  late String _sortOrder;
+  late bool _excludeMyMeetings;
 
   @override
   void initState() {
@@ -230,17 +255,29 @@ class _FiltersBottomSheetState extends State<_FiltersBottomSheet> {
     final provider = context.read<MeetingProvider>();
     _selectedCategory = provider.selectedCategory;
     _radius = provider.radius ?? 5.0;
+    _sortOrder = widget.currentSortOrder;
+    _excludeMyMeetings = widget.excludeMyMeetings;
   }
 
   void _applyFilters() {
     final provider = context.read<MeetingProvider>();
     provider.setCategory(_selectedCategory);
-    provider.setRadius(_radius);
+    provider.setRadius(_useRadiusFilter ? _radius : null);
+    widget.onSortOrderChanged(_sortOrder);
+    widget.onExcludeMyMeetingsChanged(_excludeMyMeetings);
     Navigator.pop(context);
   }
 
   void _clearFilters() {
+    setState(() {
+      _selectedCategory = null;
+      _useRadiusFilter = false;
+      _excludeMyMeetings = true;
+      _sortOrder = 'newest';
+    });
     context.read<MeetingProvider>().clearFilters();
+    widget.onSortOrderChanged('newest');
+    widget.onExcludeMyMeetingsChanged(true);
     Navigator.pop(context);
   }
 
@@ -278,6 +315,69 @@ class _FiltersBottomSheetState extends State<_FiltersBottomSheet> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Сортировка по времени
+                Text(
+                  'Сортировка',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ChoiceChip(
+                        label: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.arrow_downward, size: 16),
+                            SizedBox(width: 4),
+                            Text('Сначала новые'),
+                          ],
+                        ),
+                        selected: _sortOrder == 'newest',
+                        onSelected: (selected) {
+                          if (selected) {
+                            setState(() => _sortOrder = 'newest');
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ChoiceChip(
+                        label: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.arrow_upward, size: 16),
+                            SizedBox(width: 4),
+                            Text('Сначала старые'),
+                          ],
+                        ),
+                        selected: _sortOrder == 'oldest',
+                        onSelected: (selected) {
+                          if (selected) {
+                            setState(() => _sortOrder = 'oldest');
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+
+                // Скрыть мои встречи
+                CheckboxListTile(
+                  title: const Text('Скрыть мои встречи'),
+                  subtitle: const Text('Не показывать встречи, которые я создал'),
+                  value: _excludeMyMeetings,
+                  onChanged: (value) {
+                    setState(() => _excludeMyMeetings = value ?? true);
+                  },
+                  contentPadding: EdgeInsets.zero,
+                ),
+
+                const SizedBox(height: 16),
+
                 // Категория
                 Text(
                   'Категория',
@@ -303,10 +403,24 @@ class _FiltersBottomSheetState extends State<_FiltersBottomSheet> {
 
                 const SizedBox(height: 24),
 
-                // Радиус поиска
-                Text(
-                  'Радиус поиска: ${_radius.toStringAsFixed(1)} км',
-                  style: Theme.of(context).textTheme.titleMedium,
+                // Радиус поиска с галочкой
+                Row(
+                  children: [
+                    Checkbox(
+                      value: _useRadiusFilter,
+                      onChanged: (value) {
+                        setState(() => _useRadiusFilter = value ?? false);
+                      },
+                    ),
+                    Expanded(
+                      child: Text(
+                        'Радиус поиска: ${_radius.toStringAsFixed(1)} км',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: _useRadiusFilter ? null : AppTheme.textSecondaryColor.withOpacity(0.5),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 Slider(
                   value: _radius,
@@ -314,11 +428,9 @@ class _FiltersBottomSheetState extends State<_FiltersBottomSheet> {
                   max: 50,
                   divisions: 49,
                   label: '${_radius.toStringAsFixed(1)} км',
-                  onChanged: (value) {
-                    setState(() {
-                      _radius = value;
-                    });
-                  },
+                  onChanged: _useRadiusFilter ? (value) {
+                    setState(() => _radius = value);
+                  } : null,
                 ),
 
                 const SizedBox(height: 24),

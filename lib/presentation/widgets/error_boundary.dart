@@ -19,7 +19,6 @@ class ErrorBoundary extends StatefulWidget {
 
 class _ErrorBoundaryState extends State<ErrorBoundary> {
   Object? _error;
-  StackTrace? _stackTrace;
 
   @override
   void initState() {
@@ -30,7 +29,6 @@ class _ErrorBoundaryState extends State<ErrorBoundary> {
       if (mounted) {
         setState(() {
           _error = details.exception;
-          _stackTrace = details.stack;
         });
         widget.onError?.call(details.exception, details.stack ?? StackTrace.empty);
       }
@@ -40,7 +38,6 @@ class _ErrorBoundaryState extends State<ErrorBoundary> {
   void _resetError() {
     setState(() {
       _error = null;
-      _stackTrace = null;
     });
   }
 
@@ -50,16 +47,7 @@ class _ErrorBoundaryState extends State<ErrorBoundary> {
       return widget.errorWidget ?? _buildDefaultErrorWidget(context);
     }
 
-    return ErrorWidget.builder = (FlutterErrorDetails details) {
-      if (mounted) {
-        setState(() {
-          _error = details.exception;
-          _stackTrace = details.stack;
-        });
-        widget.onError?.call(details.exception, details.stack ?? StackTrace.empty);
-      }
-      return widget.errorWidget ?? _buildDefaultErrorWidget(context);
-    } as Widget;
+    return widget.child;
   }
 
   Widget _buildDefaultErrorWidget(BuildContext context) {

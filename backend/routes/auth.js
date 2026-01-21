@@ -9,6 +9,25 @@ router.post('/register', async (req, res) => {
   try {
     const { email, password, name } = req.body;
 
+    // Валидация обязательных полей
+    if (!email || !password || !name) {
+      return res.status(400).json({ 
+        error: 'Все поля обязательны для заполнения',
+        required: ['email', 'password', 'name']
+      });
+    }
+
+    // Валидация email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Неверный формат email' });
+    }
+
+    // Валидация пароля (минимум 6 символов)
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Пароль должен содержать минимум 6 символов' });
+    }
+
     // Проверка существования пользователя
     const userExists = await pool.query(
       'SELECT * FROM users WHERE email = $1',
@@ -55,6 +74,14 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    // Валидация обязательных полей
+    if (!email || !password) {
+      return res.status(400).json({ 
+        error: 'Email и пароль обязательны',
+        required: ['email', 'password']
+      });
+    }
 
     // Поиск пользователя
     const result = await pool.query(

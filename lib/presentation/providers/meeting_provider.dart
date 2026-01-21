@@ -29,22 +29,16 @@ class MeetingProvider extends ChangeNotifier {
   double? _radius;
   double? get radius => _radius;
 
-  int _currentPage = 1;
-  bool _hasMore = true;
+  bool _hasMore = false;
   bool get hasMore => _hasMore;
 
   // Загрузка встреч
   Future<void> loadMeetings({bool refresh = false}) async {
-    if (refresh) {
-      _currentPage = 1;
-      _hasMore = true;
-      _meetings.clear();
-    }
-
-    if (_isLoading || !_hasMore) return;
+    if (_isLoading) return;
 
     _isLoading = true;
     _error = null;
+    _meetings.clear();
     notifyListeners();
 
     try {
@@ -53,15 +47,10 @@ class MeetingProvider extends ChangeNotifier {
         startDate: _startDate,
         endDate: _endDate,
         radius: _radius,
-        page: _currentPage,
       );
 
-      if (newMeetings.isEmpty) {
-        _hasMore = false;
-      } else {
-        _meetings.addAll(newMeetings);
-        _currentPage++;
-      }
+      _meetings.addAll(newMeetings);
+      _hasMore = false; // Все встречи загружены за раз
     } catch (e) {
       _error = e.toString();
     } finally {

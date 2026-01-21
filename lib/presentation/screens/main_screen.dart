@@ -18,14 +18,43 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
-  // Экраны приложения
+  // Экраны приложения (без CreateMeetingScreen)
   final List<Widget> _screens = [
     const MeetingsFeedScreen(),
     const SearchScreen(),
-    const CreateMeetingScreen(),
     const NotificationsScreen(),
     const ProfileScreen(),
   ];
+
+  void _onTabTapped(int index) {
+    // Если нажата кнопка "Создать" (индекс 2)
+    if (index == 2) {
+      _openCreateMeeting();
+      return;
+    }
+    
+    // Корректируем индекс после удаления CreateMeetingScreen
+    final screenIndex = index > 2 ? index - 1 : index;
+    setState(() {
+      _currentIndex = screenIndex;
+    });
+  }
+
+  Future<void> _openCreateMeeting() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const CreateMeetingScreen(),
+      ),
+    );
+    
+    // Если встреча была создана, обновляем список и переключаемся на главный экран
+    if (result == true && mounted) {
+      setState(() {
+        _currentIndex = 0;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,12 +64,8 @@ class _MainScreenState extends State<MainScreen> {
         children: _screens,
       ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
+        currentIndex: _currentIndex > 1 ? _currentIndex + 1 : _currentIndex,
+        onTap: _onTabTapped,
         type: BottomNavigationBarType.fixed,
         selectedItemColor: AppTheme.primaryColor,
         unselectedItemColor: AppTheme.textSecondaryColor,

@@ -17,7 +17,7 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProviderStateMixin {
+class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late TabController _tabController;
   late UserService _userService;
   
@@ -31,11 +31,23 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   String? _error;
 
   @override
+  bool get wantKeepAlive => true;
+
+  @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _userService = UserService(context.read());
     _loadUserProfile();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Обновляем данные каждый раз при возврате на экран
+    if (mounted && !_isLoading) {
+      _refreshProfile();
+    }
   }
 
   @override
@@ -100,6 +112,20 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     }
   }
 
+  Future<void> _refreshProfile() async {
+    // Тихое обновление без показа загрузки
+    try {
+      final user = await _userService.getCurrentUser();
+      if (mounted) {
+        setState(() => _user = user);
+      }
+      _loadCreatedMeetings();
+      _loadJoinedMeetings();
+    } catch (e) {
+      // Игнорируем ошибки при фоновом обновлении
+    }
+  }
+
   Future<void> _logout() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -136,10 +162,16 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Для AutomaticKeepAliveClientMixin
     return Scaffold(
       appBar: AppBar(
         title: const Text('Профиль'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _refreshProfile,
+            tooltip: 'Обновить',
+          ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             onPressed: () {

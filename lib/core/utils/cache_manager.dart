@@ -3,11 +3,6 @@ class CacheManager {
   final Map<String, DateTime> _timestamps = {};
   final Duration defaultTtl;
 
-  // Singleton pattern
-  static final CacheManager _instance = CacheManager._internal();
-  factory CacheManager() => _instance;
-  CacheManager._internal() : defaultTtl = const Duration(minutes: 5);
-
   // Сохранить в кеш
   void put(String key, dynamic value, {Duration? ttl}) {
     _cache[key] = value;
@@ -69,5 +64,5 @@ class CacheManager {
   // Singleton pattern
   static final CacheManager _instance = CacheManager._internal();
   factory CacheManager() => _instance;
-  CacheManager._internal();
+  CacheManager._internal() : defaultTtl = const Duration(minutes: 5);
 }

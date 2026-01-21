@@ -128,16 +128,6 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
       return;
     }
 
-    if (_selectedPlace == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Выберите место на карте'),
-          backgroundColor: AppTheme.errorColor,
-        ),
-      );
-      return;
-    }
-
     setState(() => _isLoading = true);
 
     try {
@@ -150,7 +140,7 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
         dateTime: _selectedDate,
         duration: _duration,
         maxParticipants: _maxParticipants,
-        placeId: _selectedPlace!.id,
+        placeId: _selectedPlace?.id, // Место теперь опциональное
       );
 
       if (mounted) {
@@ -160,7 +150,7 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
             backgroundColor: AppTheme.successColor,
           ),
         );
-        Navigator.pop(context);
+        Navigator.pop(context, true); // Возвращаем true при успешном создании
       }
     } catch (e) {
       if (mounted) {

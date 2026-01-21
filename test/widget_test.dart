@@ -10,8 +10,10 @@ import 'package:flutter_application_1/data/services/user_service.dart';
 import 'package:flutter_application_1/data/services/notification_service.dart';
 import 'package:flutter_application_1/data/models/user.dart';
 import 'package:flutter_application_1/data/models/meeting.dart';
+import 'package:flutter_application_1/data/models/place.dart';
 import 'package:flutter_application_1/core/utils/input_validator.dart';
 import 'package:flutter_application_1/core/utils/responsive.dart';
+import 'package:flutter_application_1/core/utils/cache_manager.dart';
 
 void main() {
   group('App Tests', () {
@@ -58,20 +60,31 @@ void main() {
     });
 
     test('Meeting model serialization', () {
+      final testPlace = Place(
+        id: '1',
+        name: 'Test Place',
+        address: 'Test Address',
+        latitude: 55.7558,
+        longitude: 37.6173,
+      );
+      
       final meeting = Meeting(
         id: '1',
         title: 'Test Meeting',
         description: 'Test Description',
         category: 'Спорт',
-        dateTime: DateTime(2024, 12, 31, 15, 0),
+        place: testPlace,
+        startTime: DateTime(2024, 12, 31, 15, 0),
+        durationMinutes: 60,
         maxParticipants: 10,
-        currentParticipants: 5,
-        createdBy: User(
+        participants: [],
+        creator: User(
           id: '1',
           name: 'Creator',
           email: 'creator@example.com',
           createdAt: DateTime.now(),
         ),
+        status: MeetingStatus.upcoming,
         createdAt: DateTime.now(),
       );
 
@@ -183,10 +196,10 @@ void main() {
     });
 
     test('Cache expiration', () async {
-      final cache = CacheManager(defaultTtl: const Duration(milliseconds: 100));
+      final cache = CacheManager();
       cache.clear();
 
-      cache.put('key1', 'value1');
+      cache.put('key1', 'value1', ttl: const Duration(milliseconds: 100));
       await Future.delayed(const Duration(milliseconds: 150));
       expect(cache.get<String>('key1'), null);
     });

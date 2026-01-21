@@ -50,10 +50,20 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const { name, bio, avatar_url } = req.body;
 
+    // Проверка существования пользователя
+    const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [id]);
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+
     const result = await pool.query(
-      'UPDATE users SET name = $1, bio = $2, avatar_url = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4 RETURNING id, email, name, avatar_url, bio',
+      'UPDATE users SET name = COALESCE($1, name), bio = COALESCE($2, bio), avatar_url = COALESCE($3, avatar_url) WHERE id = $4 RETURNING id, email, name, avatar_url, bio',
       [name, bio, avatar_url, id]
     );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Не удалось обновить профиль' });
+    }
 
     res.json(result.rows[0]);
   } catch (err) {
@@ -67,7 +77,7 @@ router.get('/:id/meetings/created', async (req, res) => {
     const { id } = req.params;
     
     const result = await pool.query(`
-      SELECT m.*, p.name as place_name, p.address
+      SELECT m.*, p.name as place_name, p.address, p.latitude, p.longitude
       FROM meetings m
       LEFT JOIN places p ON m.place_id = p.id
       WHERE m.organizer_id = $1
@@ -86,7 +96,7 @@ router.get('/:id/meetings/joined', async (req, res) => {
     const { id } = req.params;
     
     const result = await pool.query(`
-      SELECT m.*, p.name as place_name, p.address
+      SELECT m.*, p.name as place_name, p.address, p.latitude, p.longitude
       FROM meetings m
       LEFT JOIN places p ON m.place_id = p.id
       INNER JOIN meeting_participants mp ON m.id = mp.meeting_id

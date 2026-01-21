@@ -198,20 +198,40 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
     _updateMapCenter(place.latitude, place.longitude);
   }
 
-  void _confirmSelection() {
-    if (_selectedPlace != null) {
+  Future<void> _confirmSelection() async {
+    // Защита от повторных вызовов
+    if (_isLoading) return;
+    
+    if (_selectedPlace != null && _selectedPlace!.id.isNotEmpty) {
+      // Место уже из базы данных, возвращаем его
       Navigator.pop(context, _selectedPlace);
     } else {
-      // Создаем место из текущих координат
-      final newPlace = Place(
-        id: '',
-        name: 'Выбранная точка',
-        address: 'Координаты: $_currentLatitude, $_currentLongitude',
-        latitude: _currentLatitude,
-        longitude: _currentLongitude,
-        rating: 0.0,
-      );
-      Navigator.pop(context, newPlace);
+      // Нужно создать новое место в базе данных
+      setState(() => _isLoading = true);
+      
+      try {
+        // Создаем место с координатами
+        final response = await _meetingService.createPlace(
+          name: _selectedPlace?.name ?? 'Выбранная точка',
+          address: _selectedPlace?.address ?? 'Координаты: ${_currentLatitude.toStringAsFixed(6)}, ${_currentLongitude.toStringAsFixed(6)}',
+          latitude: _currentLatitude,
+          longitude: _currentLongitude,
+        );
+        
+        if (mounted) {
+          Navigator.pop(context, response);
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Ошибка сохранения места: $e'),
+              backgroundColor: AppTheme.errorColor,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -349,8 +369,17 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _confirmSelection,
-                  child: const Text('Выбрать это место'),
+                  onPressed: _isLoading ? null : _confirmSelection,
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Text('Выбрать это место'),
                 ),
               ),
             ),

@@ -58,7 +58,7 @@ class MeetingService {
     required DateTime dateTime,
     required int duration,
     required int maxParticipants,
-    required String placeId,
+    String? placeId, // Сделали опциональным
     double? budget,
   }) async {
     try {
@@ -71,7 +71,7 @@ class MeetingService {
           'dateTime': dateTime.toIso8601String(),
           'duration': duration,
           'maxParticipants': maxParticipants,
-          'placeId': placeId,
+          'placeId': placeId ?? '', // Пустая строка если null
           'budget': budget,
         },
       );
@@ -166,8 +166,36 @@ class MeetingService {
         queryParameters: queryParams,
       );
 
-      final List<dynamic> data = response.data['places'] ?? [];
+      final List<dynamic> data = response.data is List ? response.data : (response.data['places'] ?? response.data ?? []);
       return data.map((json) => Place.fromJson(json)).toList();
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  // Создать новое место
+  Future<Place> createPlace({
+    required String name,
+    required String address,
+    required double latitude,
+    required double longitude,
+    String? description,
+    String? imageUrl,
+  }) async {
+    try {
+      final response = await _apiService.post(
+        '/api/places',
+        data: {
+          'name': name,
+          'address': address,
+          'latitude': latitude,
+          'longitude': longitude,
+          'description': description,
+          'image_url': imageUrl,
+        },
+      );
+
+      return Place.fromJson(response.data);
     } on DioException catch (e) {
       throw _handleError(e);
     }

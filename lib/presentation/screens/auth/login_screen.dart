@@ -223,9 +223,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
-                          'Нет аккаунта? ',
-                          style: Theme.of(context).textTheme.bodyMedium,
+                        Flexible(
+                          child: Text(
+                            'Нет аккаунта? ',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
                         ),
                         TextButton(
                           onPressed: _goToRegister,

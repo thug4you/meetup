@@ -30,8 +30,8 @@ class Place {
       id: json['id'].toString(),
       name: json['name'] as String,
       address: json['address'] as String,
-      latitude: (json['latitude'] as num?)?.toDouble() ?? 0.0,
-      longitude: (json['longitude'] as num?)?.toDouble() ?? 0.0,
+      latitude: _parseDouble(json['latitude']),
+      longitude: _parseDouble(json['longitude']),
       description: json['description'] as String?,
       photos: (json['photos'] as List<dynamic>?)
               ?.map((e) => e as String)
@@ -43,6 +43,16 @@ class Place {
       workingHours: (json['workingHours'] as Map<String, dynamic>?)
           ?.map((key, value) => MapEntry(key, value as String)),
     );
+  }
+  
+  // Вспомогательная функция для парсинга double из разных типов
+  static double _parseDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    if (value is num) return value.toDouble();
+    return 0.0;
   }
   
   Map<String, dynamic> toJson() {

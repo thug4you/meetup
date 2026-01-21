@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
 const redisClient = require('../config/redis');
+const { createNotification } = require('../utils/notifications');
 
 // Получить все встречи
 router.get('/', async (req, res) => {
@@ -12,13 +13,13 @@ router.get('/', async (req, res) => {
     if (cached) {
       return res.json({
         source: 'cache',
-        data: JSON.parse(cached)
+        meetings: JSON.parse(cached)
       });
     }
 
     // Получение из базы данных
     const result = await pool.query(`
-      SELECT m.*, p.name as place_name, p.address, 
+      SELECT m.*, p.name as place_name, p.address, p.latitude, p.longitude,
              u.name as organizer_name,
              (SELECT COUNT(*) FROM meeting_participants WHERE meeting_id = m.id) as participants_count
       FROM meetings m
@@ -33,7 +34,7 @@ router.get('/', async (req, res) => {
 
     res.json({
       source: 'database',
-      data: result.rows
+      meetings: result.rows
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -80,23 +81,55 @@ router.post('/', async (req, res) => {
   try {
     const { title, description, placeId, category, dateTime, duration, maxParticipants, budget } = req.body;
     
-    console.log('Создание встречи:', { title, description, placeId, category, dateTime, duration, maxParticipants });
+    // Валидация обязательных полей
+    if (!title || !dateTime) {
+      return res.status(400).json({ 
+        error: 'Обязательные поля не заполнены',
+        required: ['title', 'dateTime']
+      });
+    }
+    
+    console.log('Создание встречи:', { title, description, placeId, category, dateTime, duration, maxParticipants, budget });
     
     // TODO: Получить organizer_id из JWT токена
     const organizer_id = req.body.organizerId || 1;
     
     // Вычисляем end_time
     const start_time = new Date(dateTime);
-    const end_time = new Date(start_time.getTime() + (duration * 60000)); // duration в минутах
+    if (isNaN(start_time.getTime())) {
+      return res.status(400).json({ error: 'Неверный формат даты и времени' });
+    }
+    const end_time = new Date(start_time.getTime() + ((duration || 60) * 60000)); // duration в минутах
 
     // Если placeId пустой или невалидный, используем null
     const place_id = placeId && placeId !== '' ? parseInt(placeId) : null;
 
+    // Проверяем, что место существует, если placeId указан
+    if (place_id) {
+      const placeCheck = await pool.query('SELECT id FROM places WHERE id = $1', [place_id]);
+      if (placeCheck.rows.length === 0) {
+        return res.status(400).json({ error: 'Место с указанным ID не найдено' });
+      }
+    }
+
     const result = await pool.query(`
-      INSERT INTO meetings (title, description, place_id, organizer_id, start_time, end_time, max_participants)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      INSERT INTO meetings (title, description, place_id, organizer_id, start_time, end_time, max_participants, category, budget)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *
-    `, [title, description, place_id, organizer_id, start_time, end_time, maxParticipants || 10]);
+    `, [title, description, place_id, organizer_id, start_time, end_time, maxParticipants || 10, category || null, budget || null]);
+
+    // Создать уведомление для организатора
+    try {
+      await createNotification(
+        organizer_id,
+        'Встреча создана',
+        `Ваша встреча "${title}" успешно создана`,
+        'meeting'
+      );
+    } catch (notifErr) {
+      console.error('Ошибка создания уведомления:', notifErr);
+      // Не прерываем выполнение, если не удалось создать уведомление
+    }
 
     // Очистить кеш
     await redisClient.del('meetings:all');
@@ -114,12 +147,40 @@ router.post('/:id/join', async (req, res) => {
     const { id } = req.params;
     const { user_id } = req.body;
 
+    if (!user_id) {
+      return res.status(400).json({ error: 'user_id обязателен' });
+    }
+
+    // Проверяем, существует ли встреча и не превышен ли лимит участников
+    const meetingCheck = await pool.query(`
+      SELECT m.id, m.max_participants, 
+             (SELECT COUNT(*) FROM meeting_participants WHERE meeting_id = m.id) as current_participants
+      FROM meetings m
+      WHERE m.id = $1 AND m.status = 'active'
+    `, [id]);
+
+    if (meetingCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Встреча не найдена или неактивна' });
+    }
+
+    const meeting = meetingCheck.rows[0];
+    if (meeting.max_participants && meeting.current_participants >= meeting.max_participants) {
+      return res.status(400).json({ error: 'Превышен лимит участников' });
+    }
+
     const result = await pool.query(`
       INSERT INTO meeting_participants (meeting_id, user_id)
       VALUES ($1, $2)
       ON CONFLICT (meeting_id, user_id) DO NOTHING
       RETURNING *
     `, [id, user_id]);
+
+    if (result.rows.length === 0) {
+      return res.json({ message: 'Вы уже участвуете в этой встрече' });
+    }
+
+    // Очистить кеш
+    await redisClient.del('meetings:all');
 
     res.json({ message: 'Вы присоединились к встрече', data: result.rows[0] });
   } catch (err) {

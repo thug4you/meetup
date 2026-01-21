@@ -47,15 +47,24 @@ class Meeting {
   
   factory Meeting.fromJson(Map<String, dynamic> json) {
     // Создаем минимальный Place если его нет
-    final place = json['place'] != null 
-        ? Place.fromJson(json['place'] as Map<String, dynamic>)
-        : Place(
-            id: '0',
-            name: json['place_name'] as String? ?? 'Не указано',
-            address: json['address'] as String? ?? '',
-            latitude: 0,
-            longitude: 0,
-          );
+    Place place;
+    if (json['place'] != null) {
+      place = Place.fromJson(json['place'] as Map<String, dynamic>);
+    } else {
+      // Пытаемся получить данные места из полей верхнего уровня
+      final placeName = json['place_name'] as String? ?? 'Не указано';
+      final address = json['address'] as String? ?? '';
+      final latitude = json['latitude'] ?? json['place_latitude'] ?? 0.0;
+      final longitude = json['longitude'] ?? json['place_longitude'] ?? 0.0;
+      
+      place = Place(
+        id: json['place_id']?.toString() ?? '0',
+        name: placeName,
+        address: address,
+        latitude: _parseDouble(latitude),
+        longitude: _parseDouble(longitude),
+      );
+    }
     
     // Создаем минимального User если его нет
     final creator = json['creator'] != null
@@ -154,5 +163,15 @@ class Meeting {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
+  }
+  
+  // Вспомогательная функция для парсинга double из разных типов
+  static double _parseDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    if (value is num) return value.toDouble();
+    return 0.0;
   }
 }
