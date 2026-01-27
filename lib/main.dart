@@ -34,6 +34,13 @@ void main() async {
   
   // Создаем сервисы
   final apiService = ApiService();
+  
+  // Восстанавливаем токен из хранилища если есть
+  final savedToken = prefs.getString('auth_token');
+  if (savedToken != null) {
+    apiService.setAuthToken(savedToken);
+  }
+  
   final authService = AuthService(
     apiService: apiService,
     prefs: prefs,

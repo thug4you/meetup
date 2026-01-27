@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
+const { authMiddleware } = require('../middleware/auth');
 
-// Получить уведомления пользователя
-router.get('/', async (req, res) => {
+// Получить уведомления пользователя (требуется авторизация)
+router.get('/', authMiddleware, async (req, res) => {
   try {
-    // TODO: получить user_id из JWT токена
-    const userId = req.query.userId || 1;
+    // Получаем user_id из JWT токена
+    const userId = req.user.id;
     const { page = 1, limit = 20, isRead } = req.query;
     const offset = (page - 1) * limit;
 
@@ -32,10 +33,10 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Получить количество непрочитанных уведомлений
-router.get('/unread-count', async (req, res) => {
+// Получить количество непрочитанных уведомлений (требуется авторизация)
+router.get('/unread-count', authMiddleware, async (req, res) => {
   try {
-    const userId = req.query.userId || 1;
+    const userId = req.user.id;
 
     const result = await pool.query(
       'SELECT COUNT(*) as count FROM notifications WHERE user_id = $1 AND is_read = false',
@@ -48,14 +49,15 @@ router.get('/unread-count', async (req, res) => {
   }
 });
 
-// Отметить уведомление как прочитанное
-router.put('/:id/read', async (req, res) => {
+// Отметить уведомление как прочитанное (требуется авторизация)
+router.put('/:id/read', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.id;
 
     const result = await pool.query(
-      'UPDATE notifications SET is_read = true WHERE id = $1 RETURNING *',
-      [id]
+      'UPDATE notifications SET is_read = true WHERE id = $1 AND user_id = $2 RETURNING *',
+      [id, userId]
     );
 
     if (result.rows.length === 0) {
@@ -68,10 +70,10 @@ router.put('/:id/read', async (req, res) => {
   }
 });
 
-// Отметить все уведомления как прочитанные
-router.put('/mark-all-read', async (req, res) => {
+// Отметить все уведомления как прочитанные (требуется авторизация)
+router.put('/read-all', authMiddleware, async (req, res) => {
   try {
-    const userId = req.query.userId || 1;
+    const userId = req.user.id;
 
     await pool.query(
       'UPDATE notifications SET is_read = true WHERE user_id = $1 AND is_read = false',
@@ -79,6 +81,43 @@ router.put('/mark-all-read', async (req, res) => {
     );
 
     res.json({ message: 'Все уведомления отмечены как прочитанные' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Удалить уведомление (требуется авторизация)
+router.delete('/:id', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const result = await pool.query(
+      'DELETE FROM notifications WHERE id = $1 AND user_id = $2 RETURNING *',
+      [id, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Уведомление не найдено' });
+    }
+
+    res.json({ message: 'Уведомление удалено' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Очистить все уведомления (требуется авторизация)
+router.delete('/clear-all', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    await pool.query(
+      'DELETE FROM notifications WHERE user_id = $1',
+      [userId]
+    );
+
+    res.json({ message: 'Все уведомления удалены' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

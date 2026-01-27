@@ -3,9 +3,10 @@ const router = express.Router();
 const pool = require('../config/database');
 const redisClient = require('../config/redis');
 const { createNotification } = require('../utils/notifications');
+const { authMiddleware, optionalAuth } = require('../middleware/auth');
 
-// Получить все встречи
-router.get('/', async (req, res) => {
+// Получить все встречи (публичный доступ с опциональной авторизацией)
+router.get('/', optionalAuth, async (req, res) => {
   try {
     // Попытка получить из кеша Redis
     const cached = await redisClient.get('meetings:all');
@@ -76,8 +77,8 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Создать встречу
-router.post('/', async (req, res) => {
+// Создать встречу (требуется авторизация)
+router.post('/', authMiddleware, async (req, res) => {
   try {
     const { title, description, placeId, category, dateTime, duration, maxParticipants, budget } = req.body;
     
@@ -91,8 +92,8 @@ router.post('/', async (req, res) => {
     
     console.log('Создание встречи:', { title, description, placeId, category, dateTime, duration, maxParticipants, budget });
     
-    // TODO: Получить organizer_id из JWT токена
-    const organizer_id = req.body.organizerId || 1;
+    // Получаем organizer_id из JWT токена
+    const organizer_id = req.user.id;
     
     // Вычисляем end_time
     const start_time = new Date(dateTime);
@@ -141,15 +142,12 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Присоединиться к встрече
-router.post('/:id/join', async (req, res) => {
+// Присоединиться к встрече (требуется авторизация)
+router.post('/:id/join', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
-    const { user_id } = req.body;
-
-    if (!user_id) {
-      return res.status(400).json({ error: 'user_id обязателен' });
-    }
+    // Получаем user_id из JWT токена
+    const user_id = req.user.id;
 
     // Проверяем, существует ли встреча и не превышен ли лимит участников
     const meetingCheck = await pool.query(`
@@ -182,7 +180,109 @@ router.post('/:id/join', async (req, res) => {
     // Очистить кеш
     await redisClient.del('meetings:all');
 
-    res.json({ message: 'Вы присоединились к встрече', data: result.rows[0] });
+    // Возвращаем обновлённую встречу с участниками
+    const meetingResult = await pool.query(`
+      SELECT m.*, p.name as place_name, p.address, p.latitude, p.longitude,
+             u.name as organizer_name, u.avatar_url as organizer_avatar
+      FROM meetings m
+      LEFT JOIN places p ON m.place_id = p.id
+      LEFT JOIN users u ON m.organizer_id = u.id
+      WHERE m.id = $1
+    `, [id]);
+
+    const participants = await pool.query(`
+      SELECT u.id, u.name, u.avatar_url, u.email, mp.joined_at
+      FROM meeting_participants mp
+      JOIN users u ON mp.user_id = u.id
+      WHERE mp.meeting_id = $1
+    `, [id]);
+
+    res.json({
+      ...meetingResult.rows[0],
+      participants: participants.rows
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Покинуть встречу (требуется авторизация)
+router.post('/:id/leave', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user_id = req.user.id;
+
+    // Проверяем, участвует ли пользователь в встрече
+    const participantCheck = await pool.query(`
+      SELECT * FROM meeting_participants 
+      WHERE meeting_id = $1 AND user_id = $2
+    `, [id, user_id]);
+
+    if (participantCheck.rows.length === 0) {
+      return res.status(400).json({ error: 'Вы не участвуете в этой встрече' });
+    }
+
+    // Удаляем пользователя из участников
+    await pool.query(`
+      DELETE FROM meeting_participants 
+      WHERE meeting_id = $1 AND user_id = $2
+    `, [id, user_id]);
+
+    // Очистить кеш
+    await redisClient.del('meetings:all');
+
+    // Возвращаем обновлённую встречу
+    const meetingResult = await pool.query(`
+      SELECT m.*, p.name as place_name, p.address, p.latitude, p.longitude,
+             u.name as organizer_name, u.avatar_url as organizer_avatar
+      FROM meetings m
+      LEFT JOIN places p ON m.place_id = p.id
+      LEFT JOIN users u ON m.organizer_id = u.id
+      WHERE m.id = $1
+    `, [id]);
+
+    const participants = await pool.query(`
+      SELECT u.id, u.name, u.avatar_url, u.email, mp.joined_at
+      FROM meeting_participants mp
+      JOIN users u ON mp.user_id = u.id
+      WHERE mp.meeting_id = $1
+    `, [id]);
+
+    res.json({
+      ...meetingResult.rows[0],
+      participants: participants.rows
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Удалить встречу (требуется авторизация, только создатель)
+router.delete('/:id', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user_id = req.user.id;
+
+    // Проверяем, является ли пользователь организатором
+    const meeting = await pool.query(
+      'SELECT organizer_id FROM meetings WHERE id = $1',
+      [id]
+    );
+
+    if (meeting.rows.length === 0) {
+      return res.status(404).json({ error: 'Встреча не найдена' });
+    }
+
+    if (meeting.rows[0].organizer_id !== user_id) {
+      return res.status(403).json({ error: 'Только организатор может удалить встречу' });
+    }
+
+    await pool.query('DELETE FROM meetings WHERE id = $1', [id]);
+
+    // Очистить кеш
+    await redisClient.del('meetings:all');
+
+    res.json({ message: 'Встреча удалена' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

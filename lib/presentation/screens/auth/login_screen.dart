@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../providers/auth_provider.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -153,8 +152,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         if (value == null || value.isEmpty) {
                           return 'Введите пароль';
                         }
-                        if (value.length < AppConstants.minPasswordLength) {
-                          return 'Пароль должен быть минимум ${AppConstants.minPasswordLength} символов';
+                        if (value.length < 8) {
+                          return 'Пароль должен быть минимум 8 символов';
                         }
                         return null;
                       },

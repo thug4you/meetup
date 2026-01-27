@@ -54,7 +54,7 @@ class NotificationService {
   // Отметить уведомление как прочитанное
   Future<void> markAsRead(String notificationId) async {
     try {
-      await _apiService.put('/notifications/$notificationId/read');
+      await _apiService.put('/api/notifications/$notificationId/read');
     } catch (e) {
       print('Ошибка отметки уведомления как прочитанного: $e');
       rethrow;
@@ -64,7 +64,7 @@ class NotificationService {
   // Отметить все уведомления как прочитанные
   Future<void> markAllAsRead() async {
     try {
-      await _apiService.put('/notifications/read-all');
+      await _apiService.put('/api/notifications/read-all');
     } catch (e) {
       print('Ошибка отметки всех уведомлений как прочитанных: $e');
       rethrow;
@@ -74,7 +74,7 @@ class NotificationService {
   // Удалить уведомление
   Future<void> deleteNotification(String notificationId) async {
     try {
-      await _apiService.delete('/notifications/$notificationId');
+      await _apiService.delete('/api/notifications/$notificationId');
     } catch (e) {
       print('Ошибка удаления уведомления: $e');
       rethrow;
@@ -84,7 +84,7 @@ class NotificationService {
   // Очистить все уведомления
   Future<void> clearAll() async {
     try {
-      await _apiService.delete('/notifications/clear-all');
+      await _apiService.delete('/api/notifications/clear-all');
     } catch (e) {
       print('Ошибка очистки уведомлений: $e');
       rethrow;
@@ -94,7 +94,7 @@ class NotificationService {
   // Получить настройки уведомлений
   Future<Map<String, bool>> getNotificationSettings() async {
     try {
-      final response = await _apiService.get('/notifications/settings');
+      final response = await _apiService.get('/api/notifications/settings');
       
       if (response.data != null && response.data is Map) {
         return Map<String, bool>.from(response.data);
@@ -121,7 +121,7 @@ class NotificationService {
   Future<void> updateNotificationSettings(Map<String, bool> settings) async {
     try {
       await _apiService.put(
-        '/notifications/settings',
+        '/api/notifications/settings',
         data: settings,
       );
     } catch (e) {

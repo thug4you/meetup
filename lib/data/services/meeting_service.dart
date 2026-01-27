@@ -86,7 +86,7 @@ class MeetingService {
   Future<Meeting> updateMeeting(String id, Map<String, dynamic> updates) async {
     try {
       final response = await _apiService.put(
-        '/meetings/$id',
+        '/api/meetings/$id',
         data: updates,
       );
 
@@ -99,7 +99,7 @@ class MeetingService {
   // Удалить встречу
   Future<void> deleteMeeting(String id) async {
     try {
-      await _apiService.delete('/meetings/$id');
+      await _apiService.delete('/api/meetings/$id');
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -108,7 +108,7 @@ class MeetingService {
   // Присоединиться к встрече
   Future<Meeting> joinMeeting(String id) async {
     try {
-      final response = await _apiService.post('/meetings/$id/join');
+      final response = await _apiService.post('/api/meetings/$id/join');
       return Meeting.fromJson(response.data);
     } on DioException catch (e) {
       throw _handleError(e);
@@ -118,7 +118,7 @@ class MeetingService {
   // Покинуть встречу
   Future<Meeting> leaveMeeting(String id) async {
     try {
-      final response = await _apiService.post('/meetings/$id/leave');
+      final response = await _apiService.post('/api/meetings/$id/leave');
       return Meeting.fromJson(response.data);
     } on DioException catch (e) {
       throw _handleError(e);
@@ -128,7 +128,7 @@ class MeetingService {
   // Сохранить встречу в избранное
   Future<void> saveMeeting(String id) async {
     try {
-      await _apiService.post('/meetings/$id/save');
+      await _apiService.post('/api/meetings/$id/save');
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -137,7 +137,7 @@ class MeetingService {
   // Удалить из избранного
   Future<void> unsaveMeeting(String id) async {
     try {
-      await _apiService.delete('/meetings/$id/save');
+      await _apiService.delete('/api/meetings/$id/save');
     } on DioException catch (e) {
       throw _handleError(e);
     }

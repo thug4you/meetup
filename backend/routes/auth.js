@@ -7,7 +7,7 @@ const pool = require('../config/database');
 // Регистрация
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, name } = req.body;
+    const { email, password, name, phone, interests } = req.body;
 
     // Валидация обязательных полей
     if (!email || !password || !name) {
@@ -23,9 +23,9 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Неверный формат email' });
     }
 
-    // Валидация пароля (минимум 6 символов)
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Пароль должен содержать минимум 6 символов' });
+    // Валидация пароля (минимум 8 символов)
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Пароль должен содержать минимум 8 символов' });
     }
 
     // Проверка существования пользователя
@@ -43,8 +43,8 @@ router.post('/register', async (req, res) => {
 
     // Создание пользователя
     const result = await pool.query(
-      'INSERT INTO users (email, password, name) VALUES ($1, $2, $3) RETURNING id, email, name, created_at',
-      [email, hashedPassword, name]
+      'INSERT INTO users (email, password, name, phone, interests) VALUES ($1, $2, $3, $4, $5) RETURNING id, email, name, phone, interests, created_at',
+      [email, hashedPassword, name, phone || null, interests || null]
     );
 
     const user = result.rows[0];
@@ -62,12 +62,21 @@ router.post('/register', async (req, res) => {
       user: {
         id: user.id,
         email: user.email,
-        name: user.name
+        name: user.name,
+        phone: user.phone,
+        interests: user.interests
       }
     });
   } catch (err) {
+    console.error('Register error:', err);
     res.status(500).json({ error: err.message });
   }
+});
+
+// Выход
+router.post('/logout', (req, res) => {
+  // JWT stateless - просто подтверждаем выход
+  res.json({ message: 'Выход выполнен успешно' });
 });
 
 // Вход

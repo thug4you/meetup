@@ -203,7 +203,7 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
 
             // Категория
             DropdownButtonFormField<String>(
-              initialValue: _selectedCategory,
+              value: _selectedCategory,
               decoration: const InputDecoration(
                 labelText: 'Категория',
                 prefixIcon: Icon(Icons.category),

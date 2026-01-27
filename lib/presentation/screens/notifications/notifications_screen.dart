@@ -283,6 +283,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         return Icons.message;
       case models.NotificationType.report:
         return Icons.flag;
+      case models.NotificationType.meeting:
+        return Icons.event_available;
     }
   }
 
@@ -300,6 +302,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         return Colors.indigo;
       case models.NotificationType.report:
         return Colors.red;
+      case models.NotificationType.meeting:
+        return Colors.teal;
     }
   }
 

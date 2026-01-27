@@ -213,6 +213,8 @@ class NotificationProvider with ChangeNotifier {
         return 'message';
       case NotificationType.report:
         return 'flag';
+      case NotificationType.meeting:
+        return 'event_available';
     }
   }
 }

@@ -83,7 +83,7 @@ class ChatService {
   Future<List<Message>> getMessageHistory(String meetingId, {int page = 1, int limit = 50}) async {
     try {
       final response = await _apiService.get(
-        '/meetings/$meetingId/messages',
+        '/api/meetings/$meetingId/messages',
         queryParameters: {
           'page': page,
           'limit': limit,
@@ -107,7 +107,7 @@ class ChatService {
   Future<void> markMessagesAsRead(String meetingId, List<String> messageIds) async {
     try {
       await _apiService.post(
-        '/meetings/$meetingId/messages/read',
+        '/api/meetings/$meetingId/messages/read',
         data: {'messageIds': messageIds},
       );
     } catch (e) {
@@ -118,7 +118,7 @@ class ChatService {
   // Удалить сообщение
   Future<void> deleteMessage(String meetingId, String messageId) async {
     try {
-      await _apiService.delete('/meetings/$meetingId/messages/$messageId');
+      await _apiService.delete('/api/meetings/$meetingId/messages/$messageId');
     } catch (e) {
       print('Ошибка удаления сообщения: $e');
       rethrow;
