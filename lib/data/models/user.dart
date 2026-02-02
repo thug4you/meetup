@@ -6,6 +6,7 @@ class User {
   final String? avatarUrl;
   final String? bio;
   final List<String> interests;
+  final String role; // 'user' or 'admin'
   final DateTime createdAt;
   final DateTime? updatedAt;
   
@@ -17,9 +18,12 @@ class User {
     this.avatarUrl,
     this.bio,
     this.interests = const [],
+    this.role = 'user',
     required this.createdAt,
     this.updatedAt,
   });
+  
+  bool get isAdmin => role == 'admin';
   
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
@@ -33,6 +37,7 @@ class User {
               ?.map((e) => e as String)
               .toList() ??
           [],
+      role: json['role'] as String? ?? 'user',
       createdAt: json['created_at'] != null 
           ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),
@@ -51,6 +56,7 @@ class User {
       'avatarUrl': avatarUrl,
       'bio': bio,
       'interests': interests,
+      'role': role,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
     };
@@ -64,6 +70,7 @@ class User {
     String? avatarUrl,
     String? bio,
     List<String>? interests,
+    String? role,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -75,6 +82,7 @@ class User {
       avatarUrl: avatarUrl ?? this.avatarUrl,
       bio: bio ?? this.bio,
       interests: interests ?? this.interests,
+      role: role ?? this.role,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

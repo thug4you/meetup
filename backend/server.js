@@ -64,6 +64,7 @@ app.use('/api/meetings', require('./routes/meetings'));
 app.use('/api/places', require('./routes/places'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/meetings', require('./routes/chat')); // Чат внутри встреч
+app.use('/api/admin', require('./routes/admin')); // Админ-панель
 
 // Обработка ошибок
 app.use((err, req, res, next) => {

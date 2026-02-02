@@ -23,6 +23,8 @@ class Meeting {
   final bool isPrivate;
   final DateTime createdAt;
   final DateTime? updatedAt;
+  final String? organizerName; // Для админки
+  final String? organizerEmail; // Для админки
   
   Meeting({
     required this.id,
@@ -39,6 +41,8 @@ class Meeting {
     this.isPrivate = false,
     required this.createdAt,
     this.updatedAt,
+    this.organizerName,
+    this.organizerEmail,
   });
   
   bool get isFull => participants.length >= maxParticipants;
@@ -109,6 +113,8 @@ class Meeting {
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'] as String)
           : null,
+      organizerName: json['organizer_name'] as String?,
+      organizerEmail: json['organizer_email'] as String?,
     );
   }
   

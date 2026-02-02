@@ -43,8 +43,13 @@ class _LoginScreenState extends State<LoginScreen> {
         });
 
         if (success) {
-          // Переход на главный экран
-          Navigator.pushReplacementNamed(context, '/main');
+          // Переход на нужный экран в зависимости от роли
+          final user = authProvider.currentUser;
+          if (user?.isAdmin == true) {
+            Navigator.pushReplacementNamed(context, '/admin');
+          } else {
+            Navigator.pushReplacementNamed(context, '/main');
+          }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

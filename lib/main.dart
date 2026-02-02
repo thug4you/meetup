@@ -19,6 +19,8 @@ import 'presentation/screens/auth/login_screen.dart';
 import 'presentation/screens/auth/register_screen.dart';
 import 'presentation/screens/main_screen.dart';
 
+import 'presentation/screens/admin/admin_panel_screen.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -50,6 +52,7 @@ void main() async {
   final notificationService = NotificationService(apiService);
   
   runApp(MyApp(
+    apiService: apiService,
     authService: authService,
     meetingService: meetingService,
     userService: userService,
@@ -58,6 +61,7 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
+  final ApiService apiService;
   final AuthService authService;
   final MeetingService meetingService;
   final UserService userService;
@@ -65,6 +69,7 @@ class MyApp extends StatelessWidget {
   
   const MyApp({
     super.key,
+    required this.apiService,
     required this.authService,
     required this.meetingService,
     required this.userService,
@@ -75,7 +80,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        Provider<ApiService>.value(value: ApiService()),
+        Provider<ApiService>.value(value: apiService),
         Provider<UserService>.value(value: userService),
         Provider<MeetingService>.value(value: meetingService),
         ChangeNotifierProvider(
@@ -104,6 +109,7 @@ class MyApp extends StatelessWidget {
               '/login': (context) => const LoginScreen(),
               '/register': (context) => const RegisterScreen(),
               '/main': (context) => const MainScreen(),
+              '/admin': (context) => const AdminPanelScreen(),
             },
           );
         },
@@ -117,6 +123,10 @@ class MyApp extends StatelessWidget {
       case AuthStatus.loading:
         return const SplashScreen();
       case AuthStatus.authenticated:
+        // Если пользователь админ - показываем админ-панель
+        if (authProvider.currentUser?.isAdmin == true) {
+          return const AdminPanelScreen();
+        }
         return const MainScreen();
       case AuthStatus.unauthenticated:
         return const LoginScreen();

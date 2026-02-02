@@ -43,8 +43,8 @@ router.post('/register', async (req, res) => {
 
     // Создание пользователя
     const result = await pool.query(
-      'INSERT INTO users (email, password, name, phone, interests) VALUES ($1, $2, $3, $4, $5) RETURNING id, email, name, phone, interests, created_at',
-      [email, hashedPassword, name, phone || null, interests || null]
+      'INSERT INTO users (email, password, name, phone, interests, role) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, email, name, phone, interests, role, created_at',
+      [email, hashedPassword, name, phone || null, interests || null, 'user']
     );
 
     const user = result.rows[0];
@@ -64,7 +64,8 @@ router.post('/register', async (req, res) => {
         email: user.email,
         name: user.name,
         phone: user.phone,
-        interests: user.interests
+        interests: user.interests,
+        role: user.role
       }
     });
   } catch (err) {
@@ -126,7 +127,8 @@ router.post('/login', async (req, res) => {
         email: user.email,
         name: user.name,
         avatar_url: user.avatar_url,
-        bio: user.bio
+        bio: user.bio,
+        role: user.role
       }
     });
   } catch (err) {
