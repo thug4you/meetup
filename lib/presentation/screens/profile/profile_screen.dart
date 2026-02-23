@@ -411,6 +411,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           final meeting = _createdMeetings[index];
           return MeetingCard(
             meeting: meeting,
+            currentUserId: _user?.id,
             onTap: () {
               Navigator.push(
                 context,
@@ -469,6 +470,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           final meeting = _joinedMeetings[index];
           return MeetingCard(
             meeting: meeting,
+            currentUserId: _user?.id,
             onTap: () {
               Navigator.push(
                 context,

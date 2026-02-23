@@ -33,10 +33,16 @@ class MeetingService {
         queryParameters: queryParams,
       );
 
-      final List<dynamic> data = response.data['meetings'] ?? [];
-      return data.map((json) => Meeting.fromJson(json)).toList();
+      final responseData = response.data;
+      final List<dynamic> data = responseData is Map ? (responseData['meetings'] ?? []) : [];
+      return data
+          .where((json) => json is Map<String, dynamic>)
+          .map((json) => Meeting.fromJson(json as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       throw _handleError(e);
+    } catch (e) {
+      throw Exception('Ошибка загрузки встреч: $e');
     }
   }
 
@@ -44,9 +50,15 @@ class MeetingService {
   Future<Meeting> getMeetingById(String id) async {
     try {
       final response = await _apiService.get('/api/meetings/$id');
-      return Meeting.fromJson(response.data);
+      final data = response.data;
+      if (data is! Map<String, dynamic>) {
+        throw Exception('Неверный формат ответа сервера');
+      }
+      return Meeting.fromJson(data);
     } on DioException catch (e) {
       throw _handleError(e);
+    } catch (e) {
+      throw Exception('Ошибка загрузки встречи: $e');
     }
   }
 
@@ -109,9 +121,26 @@ class MeetingService {
   Future<Meeting> joinMeeting(String id) async {
     try {
       final response = await _apiService.post('/api/meetings/$id/join');
-      return Meeting.fromJson(response.data);
+      final data = response.data;
+      
+      // Бэкенд возвращает { message: '...' } если пользователь уже участник
+      if (data is Map<String, dynamic> && data.containsKey('message') && !data.containsKey('id')) {
+        // Уже участвует — загружаем актуальные данные встречи
+        final meetingResponse = await _apiService.get('/api/meetings/$id');
+        return Meeting.fromJson(meetingResponse.data as Map<String, dynamic>);
+      }
+      
+      if (data is! Map<String, dynamic>) {
+        // Ответ не является объектом встречи — загружаем данные отдельно
+        final meetingResponse = await _apiService.get('/api/meetings/$id');
+        return Meeting.fromJson(meetingResponse.data as Map<String, dynamic>);
+      }
+      
+      return Meeting.fromJson(data);
     } on DioException catch (e) {
       throw _handleError(e);
+    } catch (e) {
+      throw Exception('Ошибка при присоединении к встрече: $e');
     }
   }
 
@@ -119,9 +148,19 @@ class MeetingService {
   Future<Meeting> leaveMeeting(String id) async {
     try {
       final response = await _apiService.post('/api/meetings/$id/leave');
-      return Meeting.fromJson(response.data);
+      final data = response.data;
+      
+      // Бэкенд может вернуть { error: '...' } если пользователь не участвует
+      if (data is! Map<String, dynamic> || !data.containsKey('id')) {
+        final meetingResponse = await _apiService.get('/api/meetings/$id');
+        return Meeting.fromJson(meetingResponse.data as Map<String, dynamic>);
+      }
+      
+      return Meeting.fromJson(data);
     } on DioException catch (e) {
       throw _handleError(e);
+    } catch (e) {
+      throw Exception('Ошибка при выходе из встречи: $e');
     }
   }
 
@@ -201,16 +240,22 @@ class MeetingService {
     }
   }
 
-  String _handleError(DioException e) {
+  Exception _handleError(DioException e) {
+    String message;
     if (e.response != null) {
-      final message = e.response?.data['message'];
-      return message ?? 'Произошла ошибка при обработке запроса';
+      final data = e.response?.data;
+      if (data is Map) {
+        message = data['message'] as String? ?? data['error'] as String? ?? 'Произошла ошибка при обработке запроса';
+      } else {
+        message = 'Произошла ошибка при обработке запроса';
+      }
     } else if (e.type == DioExceptionType.connectionTimeout) {
-      return 'Превышено время ожидания подключения';
+      message = 'Превышено время ожидания подключения';
     } else if (e.type == DioExceptionType.receiveTimeout) {
-      return 'Превышено время ожидания ответа';
+      message = 'Превышено время ожидания ответа';
     } else {
-      return 'Ошибка подключения к серверу';
+      message = 'Ошибка подключения к серверу';
     }
+    return Exception(message);
   }
 }

@@ -38,7 +38,6 @@ class MeetingProvider extends ChangeNotifier {
 
     _isLoading = true;
     _error = null;
-    _meetings.clear();
     notifyListeners();
 
     try {
@@ -49,6 +48,7 @@ class MeetingProvider extends ChangeNotifier {
         radius: _radius,
       );
 
+      _meetings.clear();
       _meetings.addAll(newMeetings);
       _hasMore = false; // Все встречи загружены за раз
     } catch (e) {

@@ -189,7 +189,7 @@
     },
     {
       "name": "flutter",
-      "rootUri": "file:///C:/Users/q/Desktop/%D1%83%D1%87e%D0%B1%D0%B0/%D0%B4%D0%B8%D0%BF%D0%BB%D0%BE%D0%BC%D1%87%D0%B8%D0%BA/flutter/packages/flutter",
+      "rootUri": "file:///C:/Users/q/Desktop/%D0%B4%D0%B8%D0%BF%D0%BB%D0%BE%D0%BC%D1%87%D0%B8%D0%BA/flutter/packages/flutter",
       "packageUri": "lib/",
       "languageVersion": "3.8"
     },
@@ -213,13 +213,13 @@
     },
     {
       "name": "flutter_test",
-      "rootUri": "file:///C:/Users/q/Desktop/%D1%83%D1%87e%D0%B1%D0%B0/%D0%B4%D0%B8%D0%BF%D0%BB%D0%BE%D0%BC%D1%87%D0%B8%D0%BA/flutter/packages/flutter_test",
+      "rootUri": "file:///C:/Users/q/Desktop/%D0%B4%D0%B8%D0%BF%D0%BB%D0%BE%D0%BC%D1%87%D0%B8%D0%BA/flutter/packages/flutter_test",
       "packageUri": "lib/",
       "languageVersion": "3.8"
     },
     {
       "name": "flutter_web_plugins",
-      "rootUri": "file:///C:/Users/q/Desktop/%D1%83%D1%87e%D0%B1%D0%B0/%D0%B4%D0%B8%D0%BF%D0%BB%D0%BE%D0%BC%D1%87%D0%B8%D0%BA/flutter/packages/flutter_web_plugins",
+      "rootUri": "file:///C:/Users/q/Desktop/%D0%B4%D0%B8%D0%BF%D0%BB%D0%BE%D0%BC%D1%87%D0%B8%D0%BA/flutter/packages/flutter_web_plugins",
       "packageUri": "lib/",
       "languageVersion": "3.8"
     },
@@ -579,7 +579,7 @@
     },
     {
       "name": "sky_engine",
-      "rootUri": "file:///C:/Users/q/Desktop/%D1%83%D1%87e%D0%B1%D0%B0/%D0%B4%D0%B8%D0%BF%D0%BB%D0%BE%D0%BC%D1%87%D0%B8%D0%BA/flutter/bin/cache/pkg/sky_engine",
+      "rootUri": "file:///C:/Users/q/Desktop/%D0%B4%D0%B8%D0%BF%D0%BB%D0%BE%D0%BC%D1%87%D0%B8%D0%BA/flutter/bin/cache/pkg/sky_engine",
       "packageUri": "lib/",
       "languageVersion": "3.8"
     },
@@ -730,7 +730,7 @@
   ],
   "generator": "pub",
   "generatorVersion": "3.10.8",
-  "flutterRoot": "file:///C:/Users/q/Desktop/%D1%83%D1%87e%D0%B1%D0%B0/%D0%B4%D0%B8%D0%BF%D0%BB%D0%BE%D0%BC%D1%87%D0%B8%D0%BA/flutter",
+  "flutterRoot": "file:///C:/Users/q/Desktop/%D0%B4%D0%B8%D0%BF%D0%BB%D0%BE%D0%BC%D1%87%D0%B8%D0%BA/flutter",
   "flutterVersion": "3.38.9",
   "pubCache": "file:///C:/Users/q/AppData/Local/Pub/Cache"
 }

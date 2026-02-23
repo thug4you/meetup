@@ -62,7 +62,7 @@ router.get('/:id', async (req, res) => {
 
     // Получить участников
     const participants = await pool.query(`
-      SELECT u.id, u.name, u.avatar_url, mp.joined_at
+      SELECT u.id, u.name, u.email, u.avatar_url, mp.joined_at
       FROM meeting_participants mp
       JOIN users u ON mp.user_id = u.id
       WHERE mp.meeting_id = $1
@@ -119,6 +119,15 @@ router.post('/', authMiddleware, async (req, res) => {
       RETURNING *
     `, [title, description, place_id, organizer_id, start_time, end_time, maxParticipants || 10, category || null, budget || null]);
 
+    const meeting = result.rows[0];
+
+    // Автоматически добавляем организатора в участники
+    await pool.query(`
+      INSERT INTO meeting_participants (meeting_id, user_id)
+      VALUES ($1, $2)
+      ON CONFLICT (meeting_id, user_id) DO NOTHING
+    `, [meeting.id, organizer_id]);
+
     // Создать уведомление для организатора
     try {
       await createNotification(
@@ -135,7 +144,7 @@ router.post('/', authMiddleware, async (req, res) => {
     // Очистить кеш
     await redisClient.del('meetings:all');
 
-    res.status(201).json(result.rows[0]);
+    res.status(201).json(meeting);
   } catch (err) {
     console.error('Ошибка создания встречи:', err);
     res.status(500).json({ error: err.message });

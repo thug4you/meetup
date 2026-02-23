@@ -27,9 +27,9 @@ class Place {
   
   factory Place.fromJson(Map<String, dynamic> json) {
     return Place(
-      id: json['id'].toString(),
-      name: json['name'] as String,
-      address: json['address'] as String,
+      id: (json['id'] ?? '').toString(),
+      name: json['name'] as String? ?? 'Не указано',
+      address: json['address'] as String? ?? '',
       latitude: _parseDouble(json['latitude']),
       longitude: _parseDouble(json['longitude']),
       description: json['description'] as String?,

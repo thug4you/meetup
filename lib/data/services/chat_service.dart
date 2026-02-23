@@ -5,13 +5,15 @@ import '../models/message.dart';
 import 'api_service.dart';
 
 class ChatService {
-  final ApiService _apiService = ApiService();
+  final ApiService _apiService;
   WebSocketChannel? _channel;
   StreamController<Message>? _messageController;
   String? _currentMeetingId;
 
   // WebSocket URL (замените на ваш реальный URL)
   static const String _wsBaseUrl = 'ws://localhost:3000/chat';
+
+  ChatService(this._apiService);
 
   // Подключение к чату встречи
   Future<void> connectToChat(String meetingId) async {
@@ -138,7 +140,9 @@ class ChatService {
   }
 
   // Singleton pattern
-  static final ChatService _instance = ChatService._internal();
-  factory ChatService() => _instance;
-  ChatService._internal();
+  static ChatService? _instance;
+  factory ChatService.instance(ApiService apiService) {
+    _instance ??= ChatService(apiService);
+    return _instance!;
+  }
 }

@@ -90,7 +90,7 @@ class MyApp extends StatelessWidget {
           create: (_) => MeetingProvider(meetingService),
         ),
         ChangeNotifierProvider(
-          create: (_) => ChatProvider(),
+          create: (_) => ChatProvider(apiService),
         ),
         ChangeNotifierProvider(
           create: (_) => NotificationProvider(notificationService),

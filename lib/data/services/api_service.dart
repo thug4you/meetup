@@ -173,9 +173,15 @@ class ApiService {
       case DioExceptionType.badResponse:
         final statusCode = error.response?.statusCode;
         if (statusCode != null) {
+          // Безопасное извлечение сообщения об ошибке из ответа
+          String? serverMessage;
+          final responseData = error.response?.data;
+          if (responseData is Map) {
+            serverMessage = (responseData['message'] ?? responseData['error'])?.toString();
+          }
           switch (statusCode) {
             case 400:
-              errorMessage = error.response?.data['message'] ?? 'Неверный запрос';
+              errorMessage = serverMessage ?? 'Неверный запрос';
               break;
             case 401:
               errorMessage = 'Необходима авторизация';
@@ -195,7 +201,7 @@ class ApiService {
               errorMessage = 'Ошибка сервера. Попробуйте позже';
               break;
             default:
-              errorMessage = error.response?.data['message'] ?? 'Ошибка сервера';
+              errorMessage = serverMessage ?? 'Ошибка сервера';
           }
         }
         break;

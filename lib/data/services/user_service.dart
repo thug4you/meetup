@@ -99,14 +99,18 @@ class UserService {
     }
   }
 
-  String _handleError(DioException e) {
+  Exception _handleError(DioException e) {
+    String message;
     if (e.response != null) {
       final data = e.response!.data;
-      if (data is Map && data.containsKey('message')) {
-        return data['message'] as String;
+      if (data is Map) {
+        message = (data['message'] ?? data['error'] ?? 'Ошибка: ${e.response!.statusCode}').toString();
+      } else {
+        message = 'Ошибка: ${e.response!.statusCode}';
       }
-      return 'Ошибка: ${e.response!.statusCode}';
+    } else {
+      message = 'Ошибка сети: ${e.message}';
     }
-    return 'Ошибка сети: ${e.message}';
+    return Exception(message);
   }
 }

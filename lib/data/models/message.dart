@@ -18,13 +18,39 @@ class Message {
   });
   
   factory Message.fromJson(Map<String, dynamic> json) {
+    // Поддержка как camelCase так и snake_case
+    // sender может быть объектом или собран из полей верхнего уровня
+    User sender;
+    if (json['sender'] is Map<String, dynamic>) {
+      sender = User.fromJson(json['sender'] as Map<String, dynamic>);
+    } else {
+      // Данные отправителя на верхнем уровне (из JOIN запроса)
+      sender = User(
+        id: (json['user_id'] ?? json['sender_id'] ?? '').toString(),
+        email: json['sender_email']?.toString() ?? '',
+        name: json['sender_name']?.toString() ?? json['name']?.toString() ?? 'Пользователь',
+        createdAt: DateTime.now(),
+      );
+    }
+
+    final sentAtStr = json['sentAt'] ?? json['sent_at'] ?? json['created_at'];
+    
+    DateTime sentAt;
+    try {
+      sentAt = sentAtStr != null
+          ? DateTime.parse(sentAtStr.toString())
+          : DateTime.now();
+    } catch (_) {
+      sentAt = DateTime.now();
+    }
+
     return Message(
-      id: json['id'] as String,
-      meetingId: json['meetingId'] as String,
-      sender: User.fromJson(json['sender'] as Map<String, dynamic>),
-      content: json['content'] as String,
-      sentAt: DateTime.parse(json['sentAt'] as String),
-      isRead: json['isRead'] as bool? ?? false,
+      id: (json['id'] ?? '').toString(),
+      meetingId: (json['meetingId'] ?? json['meeting_id'] ?? '').toString(),
+      sender: sender,
+      content: json['content']?.toString() ?? '',
+      sentAt: sentAt,
+      isRead: json['isRead'] as bool? ?? json['is_read'] as bool? ?? false,
     );
   }
   

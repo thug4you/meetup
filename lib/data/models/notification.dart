@@ -44,17 +44,22 @@ class AppNotification {
             e.name == typeStr || e.name.toLowerCase() == typeStr.toLowerCase(),
         orElse: () => NotificationType.newMessage,
       ),
-      title: json['title'] as String? ?? '',
-      message: json['message'] as String? ?? '',
-      data: json['data'] as Map<String, dynamic>?,
+      title: json['title']?.toString() ?? '',
+      message: json['message']?.toString() ?? '',
+      data: json['data'] is Map<String, dynamic> ? json['data'] as Map<String, dynamic> : null,
       isRead: json['is_read'] as bool? ?? json['isRead'] as bool? ?? false,
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
-          : (json['createdAt'] != null
-                ? DateTime.parse(json['createdAt'] as String)
-                : DateTime.now()),
+      createdAt: _parseDateTime(json['created_at'] ?? json['createdAt']),
       meetingId: (json['meeting_id'] ?? json['meetingId'])?.toString(),
     );
+  }
+
+  static DateTime _parseDateTime(dynamic value) {
+    if (value == null) return DateTime.now();
+    try {
+      return DateTime.parse(value.toString());
+    } catch (_) {
+      return DateTime.now();
+    }
   }
 
   Map<String, dynamic> toJson() {

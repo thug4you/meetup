@@ -7,6 +7,7 @@ import 'dart:js' as js;
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/meeting.dart';
 import '../../../data/services/meeting_service.dart';
+import '../../providers/auth_provider.dart';
 import '../chat/meeting_chat_screen.dart';
 
 class MeetingDetailScreen extends StatefulWidget {
@@ -637,9 +638,11 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
   }
 
   Widget _buildBottomBar() {
-    // TODO: Проверить, является ли текущий пользователь участником
-    // ignore: dead_code
-    const bool isParticipant = false;
+    // Проверяем, является ли текущий пользователь участником
+    final authProvider = context.watch<AuthProvider>();
+    final currentUserId = authProvider.currentUser?.id;
+    final bool isParticipant = currentUserId != null &&
+        _meeting!.participants.any((p) => p.id == currentUserId);
     
     return Container(
       padding: const EdgeInsets.all(16),
@@ -656,7 +659,6 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       child: SafeArea(
         child: Row(
           children: [
-            // ignore: dead_code
             if (isParticipant) ...[
               Expanded(
                 child: OutlinedButton(

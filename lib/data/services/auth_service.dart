@@ -60,15 +60,21 @@ class AuthService {
         final data = response.data as Map<String, dynamic>;
         
         // Сохраняем токены
-        if (data.containsKey('token')) {
-          await _saveToken(data['token'] as String);
+        final token = data['token'];
+        if (token is String && token.isNotEmpty) {
+          await _saveToken(token);
         }
-        if (data.containsKey('refreshToken')) {
-          await _saveRefreshToken(data['refreshToken'] as String);
+        final refreshTkn = data['refreshToken'];
+        if (refreshTkn is String && refreshTkn.isNotEmpty) {
+          await _saveRefreshToken(refreshTkn);
         }
 
         // Сохраняем пользователя
-        final user = User.fromJson(data['user'] as Map<String, dynamic>);
+        final userData = data['user'];
+        if (userData is! Map<String, dynamic>) {
+          throw Exception('Ошибка регистрации: неверный формат ответа');
+        }
+        final user = User.fromJson(userData);
         await _saveUserData(user);
 
         return user;
@@ -98,15 +104,21 @@ class AuthService {
         final data = response.data as Map<String, dynamic>;
         
         // Сохраняем токены
-        if (data.containsKey('token')) {
-          await _saveToken(data['token'] as String);
+        final token = data['token'];
+        if (token is String && token.isNotEmpty) {
+          await _saveToken(token);
         }
-        if (data.containsKey('refreshToken')) {
-          await _saveRefreshToken(data['refreshToken'] as String);
+        final refreshTkn = data['refreshToken'];
+        if (refreshTkn is String && refreshTkn.isNotEmpty) {
+          await _saveRefreshToken(refreshTkn);
         }
 
         // Сохраняем пользователя
-        final user = User.fromJson(data['user'] as Map<String, dynamic>);
+        final userData = data['user'];
+        if (userData is! Map<String, dynamic>) {
+          throw Exception('Неверный формат ответа сервера');
+        }
+        final user = User.fromJson(userData);
         await _saveUserData(user);
 
         return user;

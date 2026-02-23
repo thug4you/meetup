@@ -5,6 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/meeting.dart';
 import '../../providers/meeting_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/meeting_card.dart';
 import '../meeting/meeting_detail_screen.dart';
 
@@ -619,6 +620,7 @@ class _SearchScreenState extends State<SearchScreen> {
         final meeting = _searchResults[index - 1];
         return MeetingCard(
           meeting: meeting,
+          currentUserId: context.read<AuthProvider>().currentUser?.id,
           onTap: () {
             Navigator.push(
               context,

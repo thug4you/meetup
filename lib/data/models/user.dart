@@ -26,24 +26,48 @@ class User {
   bool get isAdmin => role == 'admin';
   
   factory User.fromJson(Map<String, dynamic> json) {
+    // Обработка interests: может быть List, String (из БД) или null
+    List<String> interests = [];
+    if (json['interests'] is List) {
+      interests = (json['interests'] as List<dynamic>)
+          .map((e) => e.toString())
+          .toList();
+    } else if (json['interests'] is String) {
+      final str = json['interests'] as String;
+      if (str.isNotEmpty) {
+        interests = str.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+      }
+    }
+
+    DateTime createdAt;
+    try {
+      createdAt = json['created_at'] != null
+          ? DateTime.parse(json['created_at'].toString())
+          : DateTime.now();
+    } catch (_) {
+      createdAt = DateTime.now();
+    }
+
+    DateTime? updatedAt;
+    try {
+      updatedAt = json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'].toString())
+          : null;
+    } catch (_) {
+      updatedAt = null;
+    }
+
     return User(
-      id: json['id'].toString(),
-      email: json['email'] as String,
-      phone: json['phone'] as String?,
-      name: json['name'] as String,
-      avatarUrl: json['avatar_url'] as String?,
-      bio: json['bio'] as String?,
-      interests: (json['interests'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          [],
-      role: json['role'] as String? ?? 'user',
-      createdAt: json['created_at'] != null 
-          ? DateTime.parse(json['created_at'] as String)
-          : DateTime.now(),
-      updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'] as String)
-          : null,
+      id: (json['id'] ?? '').toString(),
+      email: json['email']?.toString() ?? '',
+      phone: json['phone']?.toString(),
+      name: json['name']?.toString() ?? 'Пользователь',
+      avatarUrl: json['avatar_url']?.toString(),
+      bio: json['bio']?.toString(),
+      interests: interests,
+      role: json['role']?.toString() ?? 'user',
+      createdAt: createdAt,
+      updatedAt: updatedAt,
     );
   }
   

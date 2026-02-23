@@ -1,11 +1,14 @@
 import 'package:flutter/foundation.dart';
 import '../../data/models/message.dart';
 import '../../data/services/chat_service.dart';
+import '../../data/services/api_service.dart';
 
 enum ChatStatus { initial, connecting, connected, disconnected, error }
 
 class ChatProvider with ChangeNotifier {
-  final ChatService _chatService = ChatService();
+  final ChatService _chatService;
+
+  ChatProvider(ApiService apiService) : _chatService = ChatService.instance(apiService);
 
   ChatStatus _status = ChatStatus.initial;
   List<Message> _messages = [];

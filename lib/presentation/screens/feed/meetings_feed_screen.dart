@@ -149,9 +149,9 @@ class _MeetingsFeedScreenState extends State<MeetingsFeedScreen> {
           var filteredMeetings = List.from(provider.meetings);
           
           // Фильтр: исключить мои встречи
+          final authProvider = context.read<AuthProvider>();
+          final currentUserId = authProvider.currentUser?.id;
           if (_excludeMyMeetings) {
-            final authProvider = context.read<AuthProvider>();
-            final currentUserId = authProvider.currentUser?.id;
             if (currentUserId != null) {
               filteredMeetings = filteredMeetings.where((m) => m.creator.id != currentUserId).toList();
             }
@@ -174,6 +174,7 @@ class _MeetingsFeedScreenState extends State<MeetingsFeedScreen> {
                 final meeting = filteredMeetings[index];
                 return MeetingCard(
                   meeting: meeting,
+                  currentUserId: currentUserId,
                   onTap: () {
                     Navigator.push(
                       context,

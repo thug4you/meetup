@@ -35,19 +35,23 @@ class Report {
 
   factory Report.fromJson(Map<String, dynamic> json) {
     return Report(
-      id: json['id'] as String,
+      id: (json['id'] ?? '').toString(),
       type: ReportType.values.firstWhere(
-        (e) => e.toString().split('.').last == json['type'],
+        (e) => e.toString().split('.').last == (json['type'] ?? ''),
         orElse: () => ReportType.meeting,
       ),
       reason: ReportReason.values.firstWhere(
-        (e) => e.toString().split('.').last == json['reason'],
+        (e) => e.toString().split('.').last == (json['reason'] ?? ''),
         orElse: () => ReportReason.other,
       ),
-      description: json['description'] as String,
-      reporterId: json['reporterId'] as String,
-      targetId: json['targetId'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      description: json['description'] as String? ?? '',
+      reporterId: (json['reporterId'] ?? json['reporter_id'] ?? '').toString(),
+      targetId: (json['targetId'] ?? json['reported_user_id'] ?? json['meeting_id'])?.toString(),
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : (json['created_at'] != null
+              ? DateTime.parse(json['created_at'] as String)
+              : DateTime.now()),
       status: json['status'] as String?,
     );
   }

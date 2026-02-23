@@ -9,6 +9,7 @@ class MeetingCard extends StatelessWidget {
   final VoidCallback? onJoin;
   final VoidCallback? onLeave;
   final VoidCallback? onSave;
+  final String? currentUserId;
 
   const MeetingCard({
     super.key,
@@ -17,6 +18,7 @@ class MeetingCard extends StatelessWidget {
     this.onJoin,
     this.onLeave,
     this.onSave,
+    this.currentUserId,
   });
 
   @override
@@ -245,11 +247,10 @@ class MeetingCard extends StatelessWidget {
   }
 
   Widget _buildActionButton(BuildContext context) {
-    // TODO: Проверить через текущего пользователя
-    // ignore: dead_code
-    const bool isParticipant = false;
+    // Проверяем, является ли текущий пользователь участником
+    final bool isParticipant = currentUserId != null &&
+        meeting.participants.any((p) => p.id == currentUserId);
     
-    // ignore: dead_code
     if (isParticipant) {
       return OutlinedButton(
         onPressed: onLeave,
