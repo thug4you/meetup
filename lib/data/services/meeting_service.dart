@@ -83,8 +83,8 @@ class MeetingService {
           'dateTime': dateTime.toIso8601String(),
           'duration': duration,
           'maxParticipants': maxParticipants,
-          'placeId': placeId ?? '', // Пустая строка если null
-          'budget': budget,
+          if (placeId != null) 'placeId': placeId,
+          if (budget != null) 'budget': budget,
         },
       );
 
@@ -182,23 +182,26 @@ class MeetingService {
     }
   }
 
-  // Поиск мест для встречи
+  // Поиск мест для встречи (с фильтрами)
   Future<List<Place>> searchPlaces({
-    required String query,
+    String? query,
     String? category,
     double? lat,
     double? lng,
     double? radius,
+    double? minBill,
+    double? maxBill,
   }) async {
     try {
-      final queryParams = <String, dynamic>{
-        'query': query,
-      };
+      final queryParams = <String, dynamic>{};
 
-      if (category != null) queryParams['category'] = category;
+      if (query != null && query.isNotEmpty) queryParams['query'] = query;
+      if (category != null && category.isNotEmpty) queryParams['category'] = category;
       if (lat != null) queryParams['lat'] = lat;
       if (lng != null) queryParams['lng'] = lng;
       if (radius != null) queryParams['radius'] = radius;
+      if (minBill != null) queryParams['min_bill'] = minBill;
+      if (maxBill != null) queryParams['max_bill'] = maxBill;
 
       final response = await _apiService.get(
         '/api/places/search',
@@ -206,9 +209,14 @@ class MeetingService {
       );
 
       final List<dynamic> data = response.data is List ? response.data : (response.data['places'] ?? response.data ?? []);
-      return data.map((json) => Place.fromJson(json)).toList();
+      return data
+          .where((json) => json is Map<String, dynamic>)
+          .map((json) => Place.fromJson(json as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       throw _handleError(e);
+    } catch (e) {
+      throw Exception('Ошибка поиска заведений: $e');
     }
   }
 
@@ -220,6 +228,8 @@ class MeetingService {
     required double longitude,
     String? description,
     String? imageUrl,
+    String? category,
+    double? averageBill,
   }) async {
     try {
       final response = await _apiService.post(
@@ -231,6 +241,8 @@ class MeetingService {
           'longitude': longitude,
           'description': description,
           'image_url': imageUrl,
+          'category': category,
+          'average_bill': averageBill,
         },
       );
 

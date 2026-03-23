@@ -3,10 +3,13 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
 import 'feed/meetings_feed_screen.dart';
 import 'package:flutter_application_1/presentation/screens/meeting/create_meeting_screen.dart';
+import 'package:flutter_application_1/presentation/screens/meeting/meeting_detail_screen.dart';
 import 'search/search_screen.dart';
 import 'profile/profile_screen.dart';
 import 'notifications/notifications_screen.dart';
 import '../providers/notification_provider.dart';
+import '../providers/meeting_provider.dart';
+import '../../../data/models/meeting.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -48,11 +51,25 @@ class _MainScreenState extends State<MainScreen> {
       ),
     );
     
-    // Если встреча была создана, обновляем список и переключаемся на главный экран
-    if (result == true && mounted) {
+    // Если встреча была создана (result - объект Meeting)
+    if (result != null && mounted) {
+      // Обновляем список встреч в фоне
+      context.read<MeetingProvider>().loadMeetings(refresh: true);
+
+      // Обновляем список, сбрасывая индекс на Главную
       setState(() {
         _currentIndex = 0;
       });
+      
+      // И открываем саму встречу
+      if (result is Meeting) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MeetingDetailScreen(meetingId: result.id),
+          ),
+        );
+      }
     }
   }
 

@@ -114,7 +114,8 @@ class ChatProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      await _chatService.sendMessage(_currentMeetingId!, content.trim());
+      final message = await _chatService.sendMessage(_currentMeetingId!, content.trim());
+      _addMessage(message);
       _isSending = false;
       notifyListeners();
     } catch (e) {
