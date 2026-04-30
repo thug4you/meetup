@@ -24,12 +24,14 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _budgetController = TextEditingController();
 
   String? _selectedCategory;
   late DateTime _selectedDate;
   late TimeOfDay _selectedTime;
   late int _duration;
   late int _maxParticipants;
+  double? _budget;
   Place? _selectedPlace;
   
   bool _isLoading = false;
@@ -46,12 +48,15 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
       _selectedTime = TimeOfDay.fromDateTime(m.startTime);
       _duration = m.durationMinutes;
       _maxParticipants = m.maxParticipants;
+      _budget = m.budget;
+      _budgetController.text = m.budget?.toStringAsFixed(0) ?? '';
       _selectedPlace = m.place;
     } else {
       _selectedDate = DateTime.now().add(const Duration(hours: 1));
       _selectedTime = TimeOfDay.now();
       _duration = 60;
       _maxParticipants = 5;
+      _budget = null;
     }
   }
 
@@ -59,6 +64,7 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _budgetController.dispose();
     super.dispose();
   }
 
@@ -143,10 +149,19 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
   }
 
   Future<void> _searchVenue() async {
+    final preferences = await _showVenuePreferencesSheet();
+    if (preferences == null) {
+      return;
+    }
+
     final place = await Navigator.push<Place>(
       context,
       MaterialPageRoute(
-        builder: (context) => const VenueSearchScreen(),
+        builder: (context) => VenueSearchScreen(
+          initialBudgetPerPerson: preferences['budgetPerPerson'] as double?,
+          initialParticipants: preferences['participants'] as int?,
+          initialRadiusKm: preferences['radiusKm'] as double?,
+        ),
       ),
     );
 
@@ -197,6 +212,7 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
             'dateTime': _selectedDate.toIso8601String(),
             'duration': _duration,
             'maxParticipants': _maxParticipants,
+            'budget': _budget,
             if (_selectedPlace != null) 'placeId': _selectedPlace!.id,
           },
         );
@@ -209,6 +225,7 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
           duration: _duration,
           maxParticipants: _maxParticipants,
           placeId: _selectedPlace?.id, // Место теперь опциональное
+          budget: _budget,
         );
       }
 
@@ -232,6 +249,110 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
         );
       }
     }
+  }
+
+  Future<Map<String, dynamic>?> _showVenuePreferencesSheet() async {
+    final budgetController = TextEditingController(text: _budgetController.text);
+    double radiusKm = 5.0;
+    int participants = _maxParticipants;
+
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppTheme.dividerColor,
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text('Параметры заведения', style: Theme.of(context).textTheme.titleLarge),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Подбери место под размер компании и бюджет, а потом уже выбирай заведение.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.textSecondaryColor,
+                        ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: budgetController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Бюджет на человека, ₽',
+                      prefixIcon: Icon(Icons.payments_outlined),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text('Сколько людей идёт: $participants', style: Theme.of(context).textTheme.titleMedium),
+                  Slider(
+                    value: participants.toDouble(),
+                    min: 2,
+                    max: 20,
+                    divisions: 18,
+                    label: '$participants',
+                    onChanged: (value) {
+                      setModalState(() => participants = value.toInt());
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  Text('Радиус поиска: ${radiusKm.toStringAsFixed(0)} км', style: Theme.of(context).textTheme.titleMedium),
+                  Slider(
+                    value: radiusKm,
+                    min: 1,
+                    max: 25,
+                    divisions: 24,
+                    label: '${radiusKm.toStringAsFixed(0)} км',
+                    onChanged: (value) {
+                      setModalState(() => radiusKm = value);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final budgetValue = double.tryParse(budgetController.text.replaceAll(',', '.'));
+                        Navigator.pop(context, {
+                          'budgetPerPerson': budgetValue,
+                          'participants': participants,
+                          'radiusKm': radiusKm,
+                        });
+                      },
+                      child: const Text('Продолжить поиск'),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    budgetController.dispose();
+    return result;
   }
 
   @override
@@ -312,6 +433,21 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
                   return 'Минимум 10 символов';
                 }
                 return null;
+              },
+            ),
+
+            const SizedBox(height: 16),
+
+            TextFormField(
+              controller: _budgetController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Бюджет на человека, ₽',
+                hintText: 'Например: 1200',
+                prefixIcon: Icon(Icons.payments_outlined),
+              ),
+              onChanged: (value) {
+                _budget = double.tryParse(value.replaceAll(',', '.'));
               },
             ),
 

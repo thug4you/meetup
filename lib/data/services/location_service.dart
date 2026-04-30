@@ -38,12 +38,12 @@ class LocationService {
     }
   }
 
-  Future<double> calculateDistance(
+  double calculateDistance(
     double startLatitude,
     double startLongitude,
     double endLatitude,
     double endLongitude,
-  ) async {
+  ) {
     return Geolocator.distanceBetween(
       startLatitude,
       startLongitude,

@@ -19,6 +19,7 @@ class _GlobalMapScreenState extends State<GlobalMapScreen> {
   final MapController _mapController = MapController();
   final LocationService _locationService = LocationService();
   LatLng _center = const LatLng(55.7558, 37.6173); // Москва по умолчанию
+  LatLng? _userLocation;
   bool _isLoadingLoc = true;
 
   @override
@@ -34,6 +35,7 @@ class _GlobalMapScreenState extends State<GlobalMapScreen> {
       if (pos != null && mounted) {
         setState(() {
           _center = LatLng(pos.latitude, pos.longitude);
+          _userLocation = _center;
         });
         _mapController.move(_center, 13.0);
       }
@@ -74,6 +76,67 @@ class _GlobalMapScreenState extends State<GlobalMapScreen> {
             return m.place.latitude != 0 && m.place.longitude != 0;
           }).toList();
 
+          final markers = <Marker>[
+            if (_userLocation != null)
+              Marker(
+                point: _userLocation!,
+                width: 56,
+                height: 56,
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 8,
+                            offset: Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(Icons.person_pin_circle, color: Colors.blue, size: 24),
+                    ),
+                    const Icon(Icons.arrow_drop_down, color: Colors.blue, size: 16),
+                  ],
+                ),
+              ),
+            ...mapMeetings.map((meeting) {
+              final lat = meeting.place.latitude;
+              final lng = meeting.place.longitude;
+              return Marker(
+                point: LatLng(lat, lng),
+                width: 50,
+                height: 50,
+                child: GestureDetector(
+                  onTap: () => _showMeetingBottomSheet(meeting),
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: AppTheme.primaryColor,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black26,
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                            )
+                          ]
+                        ),
+                        child: const Icon(Icons.people, color: Colors.white, size: 20),
+                      ),
+                      const Icon(Icons.arrow_drop_down, color: AppTheme.primaryColor, size: 16),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ];
+
           return Stack(
             children: [
               FlutterMap(
@@ -87,40 +150,7 @@ class _GlobalMapScreenState extends State<GlobalMapScreen> {
                     urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'com.example.app',
                   ),
-                  MarkerLayer(
-                    markers: mapMeetings.map((meeting) {
-                      final lat = meeting.place.latitude;
-                      final lng = meeting.place.longitude;
-                      return Marker(
-                        point: LatLng(lat, lng),
-                        width: 50,
-                        height: 50,
-                        child: GestureDetector(
-                          onTap: () => _showMeetingBottomSheet(meeting),
-                          child: Column(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: const BoxDecoration(
-                                  color: AppTheme.primaryColor,
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black26,
-                                      blurRadius: 4,
-                                      offset: Offset(0, 2),
-                                    )
-                                  ]
-                                ),
-                                child: const Icon(Icons.people, color: Colors.white, size: 20),
-                              ),
-                              const Icon(Icons.arrow_drop_down, color: AppTheme.primaryColor, size: 16),
-                            ],
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
+                  MarkerLayer(markers: markers),
                 ],
               ),
 
@@ -156,6 +186,15 @@ class _GlobalMapScreenState extends State<GlobalMapScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (context) {
+        final distanceText = _userLocation == null
+            ? null
+            : '${(_locationService.calculateDistance(
+              _userLocation!.latitude,
+              _userLocation!.longitude,
+              meeting.place.latitude,
+              meeting.place.longitude,
+            ) / 1000).toStringAsFixed(1)} км';
+
         return Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -181,6 +220,29 @@ class _GlobalMapScreenState extends State<GlobalMapScreen> {
                   ),
                 ],
               ),
+              if (distanceText != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(Icons.near_me, size: 16, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Text('От вас: $distanceText', style: const TextStyle(color: Colors.grey)),
+                  ],
+                ),
+              ],
+              if (meeting.place.category != null || meeting.place.averageBill != null) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (meeting.place.category != null)
+                      Chip(label: Text(meeting.place.category!)),
+                    if (meeting.place.averageBill != null)
+                      Chip(label: Text('Средний чек: ${meeting.place.averageBill!.toStringAsFixed(0)} ₽')),
+                  ],
+                ),
+              ],
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,

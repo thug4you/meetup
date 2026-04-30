@@ -8,7 +8,16 @@ import '../../../data/services/meeting_service.dart';
 import '../../../data/services/location_service.dart';
 
 class VenueSearchScreen extends StatefulWidget {
-  const VenueSearchScreen({super.key});
+  final double? initialBudgetPerPerson;
+  final int? initialParticipants;
+  final double? initialRadiusKm;
+
+  const VenueSearchScreen({
+    super.key,
+    this.initialBudgetPerPerson,
+    this.initialParticipants,
+    this.initialRadiusKm,
+  });
 
   @override
   State<VenueSearchScreen> createState() => _VenueSearchScreenState();
@@ -37,6 +46,9 @@ class _VenueSearchScreenState extends State<VenueSearchScreen> {
   String? _selectedCategory;
   double? _userLat;
   double? _userLng;
+  double? _budgetPerPerson;
+  double _radiusKm = 5.0;
+  int _participants = 2;
   bool _locationLoading = true;
   bool _isSearching = false;
   bool _isSaving = false;
@@ -46,6 +58,9 @@ class _VenueSearchScreenState extends State<VenueSearchScreen> {
   @override
   void initState() {
     super.initState();
+    _budgetPerPerson = widget.initialBudgetPerPerson;
+    _participants = widget.initialParticipants ?? _participants;
+    _radiusKm = widget.initialRadiusKm ?? _radiusKm;
     _requestLocation();
   }
 
@@ -112,6 +127,8 @@ class _VenueSearchScreenState extends State<VenueSearchScreen> {
       final params = <String, dynamic>{'text': query};
       if (_userLat != null) params['lat'] = _userLat;
       if (_userLng != null) params['lng'] = _userLng;
+      if (_radiusKm > 0) params['radius'] = _radiusKm;
+      if (_budgetPerPerson != null) params['max_bill'] = _budgetPerPerson;
 
       final response = await apiService.get(
         '/api/places/yandex-search',
@@ -178,6 +195,7 @@ class _VenueSearchScreenState extends State<VenueSearchScreen> {
         latitude: lat,
         longitude: lng,
         category: _mapTag(tag),
+        averageBill: _budgetPerPerson,
       );
 
       if (mounted) Navigator.pop(context, place);
@@ -244,6 +262,21 @@ class _VenueSearchScreenState extends State<VenueSearchScreen> {
       appBar: AppBar(title: const Text('Поиск заведения')),
       body: Column(
         children: [
+          if (_budgetPerPerson != null || _participants > 2 || _radiusKm != 5.0)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  if (_budgetPerPerson != null)
+                    Chip(label: Text('Бюджет: ${_budgetPerPerson!.toStringAsFixed(0)} ₽')),
+                  Chip(label: Text('Людей: $_participants')),
+                  Chip(label: Text('Радиус: ${_radiusKm.toStringAsFixed(0)} км')),
+                ],
+              ),
+            ),
+
           // Поле поиска
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -408,6 +441,8 @@ class _VenueSearchScreenState extends State<VenueSearchScreen> {
 
   Widget _buildResultCard(Map<String, dynamic> venue) {
     final tags = venue['tags'] as List?;
+    final averageBill = venue['average_bill'];
+    final distanceText = venue['distanceText']?.toString();
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -471,6 +506,26 @@ class _VenueSearchScreenState extends State<VenueSearchScreen> {
                                     ),
                                   ))
                               .toList(),
+                        ),
+                      ),
+                    if (averageBill != null || distanceText != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: [
+                            if (averageBill != null)
+                              Text(
+                                'Средний чек: ${averageBill.toString()} ₽',
+                                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                              ),
+                            if (distanceText != null)
+                              Text(
+                                'Рядом: $distanceText',
+                                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                              ),
+                          ],
                         ),
                       ),
                   ],

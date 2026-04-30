@@ -17,6 +17,7 @@ class Meeting {
   final DateTime startTime;
   final int durationMinutes;
   final int maxParticipants;
+  final double? budget;
   final List<User> participants;
   final User creator;
   final MeetingStatus status;
@@ -35,6 +36,7 @@ class Meeting {
     required this.startTime,
     required this.durationMinutes,
     required this.maxParticipants,
+    this.budget,
     required this.participants,
     required this.creator,
     required this.status,
@@ -152,6 +154,7 @@ class Meeting {
       startTime: startTime,
       durationMinutes: durationMinutes,
       maxParticipants: maxParticipants,
+      budget: _parseNullableDouble(json['budget'] ?? json['meeting_budget']),
       participants: participants,
       creator: creator,
       status: MeetingStatus.values.firstWhere(
@@ -176,6 +179,7 @@ class Meeting {
       'startTime': startTime.toIso8601String(),
       'durationMinutes': durationMinutes,
       'maxParticipants': maxParticipants,
+      'budget': budget,
       'participants': participants.map((e) => e.toJson()).toList(),
       'creator': creator.toJson(),
       'status': status.name,
@@ -194,6 +198,7 @@ class Meeting {
     DateTime? startTime,
     int? durationMinutes,
     int? maxParticipants,
+    double? budget,
     List<User>? participants,
     User? creator,
     MeetingStatus? status,
@@ -210,6 +215,7 @@ class Meeting {
       startTime: startTime ?? this.startTime,
       durationMinutes: durationMinutes ?? this.durationMinutes,
       maxParticipants: maxParticipants ?? this.maxParticipants,
+      budget: budget ?? this.budget,
       participants: participants ?? this.participants,
       creator: creator ?? this.creator,
       status: status ?? this.status,
@@ -227,5 +233,14 @@ class Meeting {
     if (value is String) return double.tryParse(value) ?? 0.0;
     if (value is num) return value.toDouble();
     return 0.0;
+  }
+
+  static double? _parseNullableDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    if (value is num) return value.toDouble();
+    return null;
   }
 }

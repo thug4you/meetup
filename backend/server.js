@@ -6,6 +6,7 @@ require('dotenv').config();
 const pool = require('./config/database');
 const redisClient = require('./config/redis');
 const { createTables } = require('./models/schema');
+const { runMigration } = require('./migrations/add_reviews_and_photos');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,6 +18,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // Создание таблиц при запуске
 createTables();
+runMigration();
 
 // Базовый маршрут
 app.get('/', (req, res) => {
@@ -65,6 +67,8 @@ app.use('/api/places', require('./routes/places'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/meetings', require('./routes/chat')); // Чат внутри встреч
 app.use('/api/admin', require('./routes/admin')); // Админ-панель
+app.use('/api/reviews', require('./routes/reviews')); // Отзывы о местах
+app.use('/api/photos', require('./routes/photos')); // Фото мест
 
 // Обработка ошибок
 app.use((err, req, res, next) => {

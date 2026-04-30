@@ -107,6 +107,26 @@ class MeetingCard extends StatelessWidget {
                   ),
                 ],
               ),
+
+              if (meeting.budget != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.payments_outlined,
+                      size: 16,
+                      color: AppTheme.textSecondaryColor,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Бюджет: ${meeting.budget!.toStringAsFixed(0)} ₽',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.textSecondaryColor,
+                          ),
+                    ),
+                  ],
+                ),
+              ],
               
               const SizedBox(height: 12),
               
