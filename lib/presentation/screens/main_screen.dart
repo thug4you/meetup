@@ -4,6 +4,7 @@ import '../../../core/theme/app_theme.dart';
 import 'feed/meetings_feed_screen.dart';
 import 'package:flutter_application_1/presentation/screens/meeting/create_meeting_screen.dart';
 import 'package:flutter_application_1/presentation/screens/meeting/meeting_detail_screen.dart';
+import 'map/global_map_screen.dart';
 import 'search/search_screen.dart';
 import 'profile/profile_screen.dart';
 import 'notifications/notifications_screen.dart';
@@ -24,20 +25,21 @@ class _MainScreenState extends State<MainScreen> {
   // Экраны приложения (без CreateMeetingScreen)
   final List<Widget> _screens = [
     const MeetingsFeedScreen(),
+    GlobalMapScreen(),
     const SearchScreen(),
     const NotificationsScreen(),
     const ProfileScreen(),
   ];
 
   void _onTabTapped(int index) {
-    // Если нажата кнопка "Создать" (индекс 2)
-    if (index == 2) {
+    // Если нажата кнопка "Создать" (индекс 3)
+    if (index == 3) {
       _openCreateMeeting();
       return;
     }
     
-    // Корректируем индекс после удаления CreateMeetingScreen
-    final screenIndex = index > 2 ? index - 1 : index;
+    // Корректируем индекс после добавления Карты
+    final screenIndex = index > 3 ? index - 1 : index;
     setState(() {
       _currentIndex = screenIndex;
     });
@@ -81,7 +83,7 @@ class _MainScreenState extends State<MainScreen> {
         children: _screens,
       ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex > 1 ? _currentIndex + 1 : _currentIndex,
+        currentIndex: _currentIndex > 2 ? _currentIndex + 1 : _currentIndex,
         onTap: _onTabTapped,
         type: BottomNavigationBarType.fixed,
         selectedItemColor: AppTheme.primaryColor,
@@ -93,6 +95,11 @@ class _MainScreenState extends State<MainScreen> {
             icon: Icon(Icons.event),
             activeIcon: Icon(Icons.event),
             label: 'Встречи',
+          ),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.map_outlined),
+            activeIcon: Icon(Icons.map),
+            label: 'Карта',
           ),
           const BottomNavigationBarItem(
             icon: Icon(Icons.search),

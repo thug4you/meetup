@@ -66,6 +66,13 @@ router.get('/yandex-search', async (req, res) => {
       fullText: r.text || `${r.title?.text}, ${r.subtitle?.text}`,
     }));
 
+    // Сортировка по расстоянию от пользователя
+    places.sort((a, b) => {
+      const distA = a.distance !== null ? a.distance : Infinity;
+      const distB = b.distance !== null ? b.distance : Infinity;
+      return distA - distB;
+    });
+
     res.json(places);
   } catch (err) {
     console.error('Yandex search error:', err.message);

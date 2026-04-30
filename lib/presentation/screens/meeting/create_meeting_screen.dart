@@ -8,8 +8,13 @@ import '../../../data/models/place.dart';
 import '../map/map_picker_screen.dart';
 import '../venue/venue_search_screen.dart';
 
+import '../../../data/models/meeting.dart';
+import '../../providers/meeting_provider.dart';
+
 class CreateMeetingScreen extends StatefulWidget {
-  const CreateMeetingScreen({super.key});
+  final Meeting? initialMeeting;
+
+  const CreateMeetingScreen({super.key, this.initialMeeting});
 
   @override
   State<CreateMeetingScreen> createState() => _CreateMeetingScreenState();
@@ -19,15 +24,36 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  
+
   String? _selectedCategory;
-  DateTime _selectedDate = DateTime.now().add(const Duration(hours: 1));
-  TimeOfDay _selectedTime = TimeOfDay.now();
-  int _duration = 60;
-  int _maxParticipants = 5;
+  late DateTime _selectedDate;
+  late TimeOfDay _selectedTime;
+  late int _duration;
+  late int _maxParticipants;
   Place? _selectedPlace;
   
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialMeeting != null) {
+      final m = widget.initialMeeting!;
+      _titleController.text = m.title;
+      _descriptionController.text = m.description;
+      _selectedCategory = m.category;
+      _selectedDate = m.startTime;
+      _selectedTime = TimeOfDay.fromDateTime(m.startTime);
+      _duration = m.durationMinutes;
+      _maxParticipants = m.maxParticipants;
+      _selectedPlace = m.place;
+    } else {
+      _selectedDate = DateTime.now().add(const Duration(hours: 1));
+      _selectedTime = TimeOfDay.now();
+      _duration = 60;
+      _maxParticipants = 5;
+    }
+  }
 
   @override
   void dispose() {
@@ -144,7 +170,7 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
       return;
     }
 
-    if (_selectedDate.isBefore(DateTime.now())) {
+    if (_selectedDate.isBefore(DateTime.now()) && widget.initialMeeting == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Нельзя выбрать прошедшее время'),
@@ -159,37 +185,51 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
     try {
       final meetingService = context.read<MeetingService>();
       
-      final createdMeeting = await meetingService.createMeeting(
-        title: _titleController.text,
-        description: _descriptionController.text,
-        category: _selectedCategory!,
-        dateTime: _selectedDate,
-        duration: _duration,
-        maxParticipants: _maxParticipants,
-        placeId: _selectedPlace?.id, // Место теперь опциональное
-      );
+      Meeting returnedMeeting;
+
+      if (widget.initialMeeting != null) {
+        returnedMeeting = await meetingService.updateMeeting(
+          widget.initialMeeting!.id,
+          {
+            'title': _titleController.text,
+            'description': _descriptionController.text,
+            'categoryId': _selectedCategory,
+            'dateTime': _selectedDate.toIso8601String(),
+            'duration': _duration,
+            'maxParticipants': _maxParticipants,
+            if (_selectedPlace != null) 'placeId': _selectedPlace!.id,
+          },
+        );
+      } else {
+        returnedMeeting = await meetingService.createMeeting(
+          title: _titleController.text,
+          description: _descriptionController.text,
+          category: _selectedCategory!,
+          dateTime: _selectedDate,
+          duration: _duration,
+          maxParticipants: _maxParticipants,
+          placeId: _selectedPlace?.id, // Место теперь опциональное
+        );
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Встреча создана успешно!'),
+          SnackBar(
+            content: Text(widget.initialMeeting != null ? 'Встреча обновлена!' : 'Встреча создана успешно!'),
             backgroundColor: AppTheme.successColor,
           ),
         );
-        Navigator.pop(context, createdMeeting); // Возвращаем саму встречу
+        Navigator.pop(context, returnedMeeting); // Возвращаем саму встречу
       }
     } catch (e) {
       if (mounted) {
+        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(e.toString()),
             backgroundColor: AppTheme.errorColor,
           ),
         );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
       }
     }
   }
@@ -198,7 +238,7 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Создать встречу'),
+        title: Text(widget.initialMeeting != null ? 'Редактировать встречу' : 'Создать встречу'),
       ),
       body: Form(
         key: _formKey,
@@ -405,7 +445,7 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
                           valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       )
-                    : const Text('Создать встречу'),
+                    : Text(widget.initialMeeting != null ? 'Сохранить изменения' : 'Создать встречу'),
               ),
             ),
 
