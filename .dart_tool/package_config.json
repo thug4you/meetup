@@ -201,7 +201,7 @@
     },
     {
       "name": "flutter",
-      "rootUri": "file:///C:/Users/q/Desktop/%D0%B4%D0%B8%D0%BF%D0%BB%D0%BE%D0%BC%D1%87%D0%B8%D0%BA/meetup/flutter/packages/flutter",
+      "rootUri": "file:///C:/flutter_src/packages/flutter",
       "packageUri": "lib/",
       "languageVersion": "3.9"
     },
@@ -231,13 +231,13 @@
     },
     {
       "name": "flutter_test",
-      "rootUri": "file:///C:/Users/q/Desktop/%D0%B4%D0%B8%D0%BF%D0%BB%D0%BE%D0%BC%D1%87%D0%B8%D0%BA/meetup/flutter/packages/flutter_test",
+      "rootUri": "file:///C:/flutter_src/packages/flutter_test",
       "packageUri": "lib/",
       "languageVersion": "3.9"
     },
     {
       "name": "flutter_web_plugins",
-      "rootUri": "file:///C:/Users/q/Desktop/%D0%B4%D0%B8%D0%BF%D0%BB%D0%BE%D0%BC%D1%87%D0%B8%D0%BA/meetup/flutter/packages/flutter_web_plugins",
+      "rootUri": "file:///C:/flutter_src/packages/flutter_web_plugins",
       "packageUri": "lib/",
       "languageVersion": "3.9"
     },
@@ -435,7 +435,7 @@
     },
     {
       "name": "matcher",
-      "rootUri": "file:///C:/Users/q/AppData/Local/Pub/Cache/hosted/pub.dev/matcher-0.12.18",
+      "rootUri": "file:///C:/Users/q/AppData/Local/Pub/Cache/hosted/pub.dev/matcher-0.12.19",
       "packageUri": "lib/",
       "languageVersion": "3.7"
     },
@@ -627,7 +627,7 @@
     },
     {
       "name": "sky_engine",
-      "rootUri": "file:///C:/Users/q/Desktop/%D0%B4%D0%B8%D0%BF%D0%BB%D0%BE%D0%BC%D1%87%D0%B8%D0%BA/meetup/flutter/bin/cache/pkg/sky_engine",
+      "rootUri": "file:///C:/flutter_src/bin/cache/pkg/sky_engine",
       "packageUri": "lib/",
       "languageVersion": "3.9"
     },
@@ -681,7 +681,7 @@
     },
     {
       "name": "test_api",
-      "rootUri": "file:///C:/Users/q/AppData/Local/Pub/Cache/hosted/pub.dev/test_api-0.7.9",
+      "rootUri": "file:///C:/Users/q/AppData/Local/Pub/Cache/hosted/pub.dev/test_api-0.7.10",
       "packageUri": "lib/",
       "languageVersion": "3.7"
     },
@@ -837,8 +837,8 @@
     }
   ],
   "generator": "pub",
-  "generatorVersion": "3.11.0",
-  "flutterRoot": "file:///C:/Users/q/Desktop/%D0%B4%D0%B8%D0%BF%D0%BB%D0%BE%D0%BC%D1%87%D0%B8%D0%BA/meetup/flutter",
-  "flutterVersion": "3.41.2",
+  "generatorVersion": "3.11.5",
+  "flutterRoot": "file:///C:/flutter_src",
+  "flutterVersion": "3.41.9",
   "pubCache": "file:///C:/Users/q/AppData/Local/Pub/Cache"
 }
