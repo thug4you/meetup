@@ -11,6 +11,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/meeting_provider.dart';
 import '../chat/meeting_chat_screen.dart';
 import 'create_meeting_screen.dart';
+import 'review_meeting_screen.dart';
 
 class MeetingDetailScreen extends StatefulWidget {
   final String meetingId;
@@ -42,8 +43,16 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
   void _initializeMap() {
     if (_meeting == null || _mapInitialized) return;
     
+    // Проверяем наличие координат
     final lat = _meeting!.place.latitude;
     final lng = _meeting!.place.longitude;
+    
+    if (lat == 0 || lng == 0) {
+      // Место не выбрано
+      _mapInitialized = true;
+      return;
+    }
+    
     final placeName = _meeting!.place.name.replaceAll("'", "\\'");
     _mapViewId = 'meeting-map-${widget.meetingId}-${DateTime.now().millisecondsSinceEpoch}';
     
@@ -479,7 +488,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
           ),
           const SizedBox(height: 12),
           
-          // Реальная карта Яндекс
+          // Реальная карта Яндекс или сообщение об отсутствии места
           Container(
             height: 200,
             decoration: BoxDecoration(
@@ -494,10 +503,19 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const CircularProgressIndicator(),
+                        if (_meeting!.place.latitude == 0 && _meeting!.place.longitude == 0)
+                          Icon(
+                            Icons.location_off,
+                            size: 48,
+                            color: AppTheme.textSecondaryColor,
+                          )
+                        else
+                          const CircularProgressIndicator(),
                         const SizedBox(height: 8),
                         Text(
-                          'Загрузка карты...',
+                          _meeting!.place.latitude == 0 && _meeting!.place.longitude == 0
+                              ? 'Место не выбрано'
+                              : 'Загрузка карты...',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: AppTheme.textSecondaryColor,
                               ),
@@ -707,6 +725,11 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
     final bool isParticipant = currentUserId != null &&
         _meeting!.participants.any((p) => p.id == currentUserId);
     
+    // Проверяем, завершилась ли встреча
+    final now = DateTime.now();
+    final endTime = _meeting!.dateTime.add(Duration(minutes: _meeting!.duration));
+    final isMeetingEnded = now.isAfter(endTime);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -720,44 +743,75 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
         ],
       ),
       child: SafeArea(
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            if (isParticipant) ...[
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _handleLeave,
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppTheme.errorColor),
-                    foregroundColor: AppTheme.errorColor,
-                  ),
-                  child: const Text('Покинуть'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
+            // Кнопка отзыва, если встреча завершена
+            if (isParticipant && isMeetingEnded) ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    final result = await Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => MeetingChatScreen(
-                          meetingId: _meeting!.id,
-                          meetingTitle: _meeting!.title,
-                        ),
+                        builder: (context) => ReviewMeetingScreen(meeting: _meeting!),
                       ),
                     );
+                    if (result == true) {
+                      _loadMeeting(); // Перезагрузим данные встречи
+                    }
                   },
-                  child: const Text('Открыть чат'),
+                  icon: const Icon(Icons.rate_review),
+                  label: const Text('Оставить отзыв'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.accentColor,
+                  ),
                 ),
               ),
-            ] else ...[
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _meeting!.isFull ? null : _handleJoin,
-                  child: Text(_meeting!.isFull ? 'Мест нет' : 'Присоединиться'),
-                ),
-              ),
+              const SizedBox(height: 12),
             ],
+            
+            Row(
+              children: [
+                if (isParticipant) ...[
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _handleLeave,
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppTheme.errorColor),
+                        foregroundColor: AppTheme.errorColor,
+                      ),
+                      child: const Text('Покинуть'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => MeetingChatScreen(
+                              meetingId: _meeting!.id,
+                              meetingTitle: _meeting!.title,
+                            ),
+                          ),
+                        );
+                      },
+                      child: const Text('Открыть чат'),
+                    ),
+                  ),
+                ] else ...[
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _meeting!.isFull ? null : _handleJoin,
+                      child: Text(_meeting!.isFull ? 'Мест нет' : 'Присоединиться'),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ],
         ),
       ),

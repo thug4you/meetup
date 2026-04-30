@@ -185,6 +185,16 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
       return;
     }
 
+    if (_selectedPlace == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Пожалуйста, выберите место встречи'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+      return;
+    }
+
     if (_selectedDate.isBefore(DateTime.now()) && widget.initialMeeting == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -568,10 +578,38 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
             const SizedBox(height: 32),
 
             // Кнопка создать
+            if (_selectedPlace == null)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.errorColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppTheme.errorColor.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info, color: AppTheme.errorColor, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Выберите место встречи перед созданием',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppTheme.errorColor,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              const SizedBox.shrink(),
+            
+            const SizedBox(height: 16),
+
             SizedBox(
               height: 50,
               child: ElevatedButton(
-                onPressed: _isLoading ? null : _createMeeting,
+                onPressed: (_isLoading || _selectedPlace == null) ? null : _createMeeting,
                 child: _isLoading
                     ? const SizedBox(
                         height: 20,

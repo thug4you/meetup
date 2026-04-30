@@ -7,6 +7,7 @@ class Place {
   final String? description;
   final List<String> photos;
   final double? rating;
+  final double? averageRating;
   final String? phone;
   final String? website;
   final Map<String, String>? workingHours;
@@ -22,6 +23,7 @@ class Place {
     this.description,
     this.photos = const [],
     this.rating,
+    this.averageRating,
     this.phone,
     this.website,
     this.workingHours,
@@ -42,6 +44,7 @@ class Place {
               .toList() ??
           [],
       rating: (json['rating'] as num?)?.toDouble(),
+      averageRating: _parseNullableDouble(json['average_rating']),
       phone: json['phone'] as String?,
       website: json['website'] as String?,
       workingHours: (json['workingHours'] as Map<String, dynamic>?)
@@ -79,6 +82,7 @@ class Place {
       'longitude': longitude,
       'description': description,
       'photos': photos,
+      'averageRating': averageRating,
       'rating': rating,
       'phone': phone,
       'website': website,
