@@ -1,24 +1,19 @@
 import 'dart:async';
-import 'dart:convert';
-import 'package:web_socket_channel/web_socket_channel.dart';
 import '../models/message.dart';
 import 'api_service.dart';
 
 class ChatService {
   final ApiService _apiService;
-  WebSocketChannel? _channel;
-  StreamController<Message>? _messageController;
   String? _currentMeetingId;
-
-  // WebSocket URL (замените на ваш реальный URL)
-  static const String _wsBaseUrl = 'ws://localhost:3000/chat';
+  Timer? _pollingTimer;
+  StreamController<Message>? _messageController;
+  final Set<String> _knownMessageIds = {};
 
   ChatService(this._apiService);
 
-  // Подключение к чату встречи
+  // Подключение к чату встречи (REST polling)
   Future<void> connectToChat(String meetingId) async {
-    if (_currentMeetingId == meetingId && _channel != null) {
-      // Уже подключены к этому чату
+    if (_currentMeetingId == meetingId && _pollingTimer != null) {
       return;
     }
 
@@ -27,54 +22,60 @@ class ChatService {
 
     _currentMeetingId = meetingId;
     _messageController = StreamController<Message>.broadcast();
+    _knownMessageIds.clear();
+
+    // Polling каждые 3 секунды
+    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      _pollNewMessages();
+    });
+  }
+
+  Future<void> _pollNewMessages() async {
+    if (_currentMeetingId == null) return;
 
     try {
-      // Получаем токен для авторизации WebSocket
-      final token = await _apiService.getAuthToken();
-      
-      // Подключаемся к WebSocket с параметрами
-      final uri = Uri.parse('$_wsBaseUrl/$meetingId?token=$token');
-      _channel = WebSocketChannel.connect(uri);
-
-      // Слушаем входящие сообщения
-      _channel!.stream.listen(
-        (data) {
-          try {
-            final json = jsonDecode(data);
-            final message = Message.fromJson(json);
-            _messageController?.add(message);
-          } catch (e) {
-            print('Ошибка парсинга сообщения: $e');
-          }
-        },
-        onError: (error) {
-          print('WebSocket ошибка: $error');
-          _messageController?.addError(error);
-        },
-        onDone: () {
-          print('WebSocket соединение закрыто');
+      final response = await _apiService.get(
+        '/api/meetings/$_currentMeetingId/messages',
+        queryParameters: {
+          'page': 1,
+          'limit': 50,
         },
       );
+
+      if (response.data != null && response.data is List) {
+        final messages = (response.data as List)
+            .where((json) => json is Map<String, dynamic>)
+            .map((json) => Message.fromJson(json as Map<String, dynamic>))
+            .toList();
+
+        for (final message in messages) {
+          if (!_knownMessageIds.contains(message.id)) {
+            _knownMessageIds.add(message.id);
+            _messageController?.add(message);
+          }
+        }
+      }
     } catch (e) {
-      print('Ошибка подключения к чату: $e');
-      rethrow;
+      // Тихо игнорируем ошибки polling
+      print('Polling ошибка: $e');
     }
   }
 
-  // Отправить сообщение
-  Future<void> sendMessage(String meetingId, String content) async {
-    if (_channel == null || _currentMeetingId != meetingId) {
-      throw Exception('Не подключен к чату встречи');
-    }
-
+  // Отправить сообщение через REST API
+  Future<Message> sendMessage(String meetingId, String content) async {
     try {
-      final messageData = {
-        'meetingId': meetingId,
-        'content': content,
-        'timestamp': DateTime.now().toIso8601String(),
-      };
+      final response = await _apiService.post(
+        '/api/meetings/$meetingId/messages',
+        data: {'content': content},
+      );
 
-      _channel!.sink.add(jsonEncode(messageData));
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        final message = Message.fromJson(data);
+        _knownMessageIds.add(message.id);
+        return message;
+      }
+      throw Exception('Неверный формат ответа');
     } catch (e) {
       print('Ошибка отправки сообщения: $e');
       rethrow;
@@ -93,9 +94,16 @@ class ChatService {
       );
 
       if (response.data != null && response.data is List) {
-        return (response.data as List)
-            .map((json) => Message.fromJson(json))
+        final messages = (response.data as List)
+            .where((json) => json is Map<String, dynamic>)
+            .map((json) => Message.fromJson(json as Map<String, dynamic>))
             .toList();
+
+        for (final msg in messages) {
+          _knownMessageIds.add(msg.id);
+        }
+
+        return messages;
       }
 
       return [];
@@ -132,11 +140,12 @@ class ChatService {
 
   // Отключиться от чата
   Future<void> disconnect() async {
-    await _channel?.sink.close();
-    _channel = null;
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
     await _messageController?.close();
     _messageController = null;
     _currentMeetingId = null;
+    _knownMessageIds.clear();
   }
 
   // Singleton pattern

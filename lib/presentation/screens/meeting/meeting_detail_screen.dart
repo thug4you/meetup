@@ -8,7 +8,9 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/models/meeting.dart';
 import '../../../data/services/meeting_service.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/meeting_provider.dart';
 import '../chat/meeting_chat_screen.dart';
+import 'create_meeting_screen.dart';
 
 class MeetingDetailScreen extends StatefulWidget {
   final String meetingId;
@@ -273,6 +275,9 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
   }
 
   Widget _buildAppBar() {
+    final currentUserId = context.watch<AuthProvider>().currentUser?.id;
+    final isOrganizer = _meeting!.creator.id == currentUserId;
+
     return SliverAppBar(
       expandedHeight: 200,
       pinned: true,
@@ -303,6 +308,64 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
         ),
       ),
       actions: [
+        if (isOrganizer)
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () async {
+              final updated = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CreateMeetingScreen(initialMeeting: _meeting),
+                ),
+              );
+              if (updated != null && mounted) {
+                context.read<MeetingProvider>().loadMeetings(refresh: true);
+                setState(() {
+                  _meeting = updated as Meeting;
+                });
+              }
+            },
+          ),
+        if (isOrganizer)
+          IconButton(
+            icon: const Icon(Icons.delete),
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Удалить встречу?'),
+                  content: const Text('Вы уверены, что хотите удалить эту встречу? Это действие нельзя отменить.'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('Отмена'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorColor),
+                      child: const Text('Удалить'),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirm == true && mounted) {
+                try {
+                  await _meetingService.deleteMeeting(_meeting!.id);
+                  if (mounted) {
+                    context.read<MeetingProvider>().loadMeetings(refresh: true);
+                    Navigator.pop(context);
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(e.toString()), backgroundColor: AppTheme.errorColor),
+                    );
+                  }
+                }
+              }
+            },
+          ),
         IconButton(
           icon: const Icon(Icons.share),
           onPressed: () {

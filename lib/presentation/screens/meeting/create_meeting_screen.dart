@@ -6,9 +6,15 @@ import '../../../core/constants/app_constants.dart';
 import '../../../data/services/meeting_service.dart';
 import '../../../data/models/place.dart';
 import '../map/map_picker_screen.dart';
+import '../venue/venue_search_screen.dart';
+
+import '../../../data/models/meeting.dart';
+import '../../providers/meeting_provider.dart';
 
 class CreateMeetingScreen extends StatefulWidget {
-  const CreateMeetingScreen({super.key});
+  final Meeting? initialMeeting;
+
+  const CreateMeetingScreen({super.key, this.initialMeeting});
 
   @override
   State<CreateMeetingScreen> createState() => _CreateMeetingScreenState();
@@ -18,15 +24,36 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  
+
   String? _selectedCategory;
-  DateTime _selectedDate = DateTime.now().add(const Duration(hours: 1));
-  TimeOfDay _selectedTime = TimeOfDay.now();
-  int _duration = 60;
-  int _maxParticipants = 5;
+  late DateTime _selectedDate;
+  late TimeOfDay _selectedTime;
+  late int _duration;
+  late int _maxParticipants;
   Place? _selectedPlace;
   
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialMeeting != null) {
+      final m = widget.initialMeeting!;
+      _titleController.text = m.title;
+      _descriptionController.text = m.description;
+      _selectedCategory = m.category;
+      _selectedDate = m.startTime;
+      _selectedTime = TimeOfDay.fromDateTime(m.startTime);
+      _duration = m.durationMinutes;
+      _maxParticipants = m.maxParticipants;
+      _selectedPlace = m.place;
+    } else {
+      _selectedDate = DateTime.now().add(const Duration(hours: 1));
+      _selectedTime = TimeOfDay.now();
+      _duration = 60;
+      _maxParticipants = 5;
+    }
+  }
 
   @override
   void dispose() {
@@ -115,6 +142,21 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
     }
   }
 
+  Future<void> _searchVenue() async {
+    final place = await Navigator.push<Place>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const VenueSearchScreen(),
+      ),
+    );
+
+    if (place != null) {
+      setState(() {
+        _selectedPlace = place;
+      });
+    }
+  }
+
   Future<void> _createMeeting() async {
     if (!_formKey.currentState!.validate()) return;
     
@@ -128,42 +170,66 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
       return;
     }
 
+    if (_selectedDate.isBefore(DateTime.now()) && widget.initialMeeting == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Нельзя выбрать прошедшее время'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
       final meetingService = context.read<MeetingService>();
       
-      await meetingService.createMeeting(
-        title: _titleController.text,
-        description: _descriptionController.text,
-        category: _selectedCategory!,
-        dateTime: _selectedDate,
-        duration: _duration,
-        maxParticipants: _maxParticipants,
-        placeId: _selectedPlace?.id, // Место теперь опциональное
-      );
+      Meeting returnedMeeting;
+
+      if (widget.initialMeeting != null) {
+        returnedMeeting = await meetingService.updateMeeting(
+          widget.initialMeeting!.id,
+          {
+            'title': _titleController.text,
+            'description': _descriptionController.text,
+            'categoryId': _selectedCategory,
+            'dateTime': _selectedDate.toIso8601String(),
+            'duration': _duration,
+            'maxParticipants': _maxParticipants,
+            if (_selectedPlace != null) 'placeId': _selectedPlace!.id,
+          },
+        );
+      } else {
+        returnedMeeting = await meetingService.createMeeting(
+          title: _titleController.text,
+          description: _descriptionController.text,
+          category: _selectedCategory!,
+          dateTime: _selectedDate,
+          duration: _duration,
+          maxParticipants: _maxParticipants,
+          placeId: _selectedPlace?.id, // Место теперь опциональное
+        );
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Встреча создана успешно!'),
+          SnackBar(
+            content: Text(widget.initialMeeting != null ? 'Встреча обновлена!' : 'Встреча создана успешно!'),
             backgroundColor: AppTheme.successColor,
           ),
         );
-        Navigator.pop(context, true); // Возвращаем true при успешном создании
+        Navigator.pop(context, returnedMeeting); // Возвращаем саму встречу
       }
     } catch (e) {
       if (mounted) {
+        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(e.toString()),
             backgroundColor: AppTheme.errorColor,
           ),
         );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
       }
     }
   }
@@ -172,7 +238,7 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Создать встречу'),
+        title: Text(widget.initialMeeting != null ? 'Редактировать встречу' : 'Создать встречу'),
       ),
       body: Form(
         key: _formKey,
@@ -251,22 +317,52 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
 
             const SizedBox(height: 24),
 
-            // Место
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.place, color: AppTheme.primaryColor),
-                title: Text(
-                  _selectedPlace?.name ?? 'Выбрать место на карте',
-                  style: TextStyle(
-                    color: _selectedPlace != null ? AppTheme.textPrimaryColor : AppTheme.textHintColor,
+            // Место — информация о выбранном
+            if (_selectedPlace != null) ...[
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.place, color: AppTheme.primaryColor),
+                  title: Text(
+                    _selectedPlace!.name,
+                    style: const TextStyle(color: AppTheme.textPrimaryColor),
+                  ),
+                  subtitle: Text(_selectedPlace!.address),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () {
+                      setState(() => _selectedPlace = null);
+                    },
                   ),
                 ),
-                subtitle: _selectedPlace != null
-                    ? Text(_selectedPlace!.address)
-                    : null,
-                trailing: const Icon(Icons.chevron_right),
-                onTap: _selectPlace,
               ),
+              const SizedBox(height: 8),
+            ],
+
+            // Кнопки выбора места
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _searchVenue,
+                    icon: const Icon(Icons.search),
+                    label: const Text('Поиск заведения'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _selectPlace,
+                    icon: const Icon(Icons.map),
+                    label: const Text('Точка на карте'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
             ),
 
             const SizedBox(height: 16),
@@ -349,7 +445,7 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
                           valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       )
-                    : const Text('Создать встречу'),
+                    : Text(widget.initialMeeting != null ? 'Сохранить изменения' : 'Создать встречу'),
               ),
             ),
 

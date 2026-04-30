@@ -10,6 +10,8 @@ class Place {
   final String? phone;
   final String? website;
   final Map<String, String>? workingHours;
+  final String? category;
+  final double? averageBill;
   
   Place({
     required this.id,
@@ -23,6 +25,8 @@ class Place {
     this.phone,
     this.website,
     this.workingHours,
+    this.category,
+    this.averageBill,
   });
   
   factory Place.fromJson(Map<String, dynamic> json) {
@@ -42,6 +46,8 @@ class Place {
       website: json['website'] as String?,
       workingHours: (json['workingHours'] as Map<String, dynamic>?)
           ?.map((key, value) => MapEntry(key, value as String)),
+      category: json['category'] as String?,
+      averageBill: _parseNullableDouble(json['average_bill']),
     );
   }
   
@@ -53,6 +59,15 @@ class Place {
     if (value is String) return double.tryParse(value) ?? 0.0;
     if (value is num) return value.toDouble();
     return 0.0;
+  }
+
+  static double? _parseNullableDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    if (value is num) return value.toDouble();
+    return null;
   }
   
   Map<String, dynamic> toJson() {
@@ -68,6 +83,8 @@ class Place {
       'phone': phone,
       'website': website,
       'workingHours': workingHours,
+      'category': category,
+      'average_bill': averageBill,
     };
   }
 }

@@ -29,6 +29,8 @@ const createTables = async () => {
         longitude DECIMAL(11, 8),
         description TEXT,
         image_url VARCHAR(500),
+        category VARCHAR(100),
+        average_bill DECIMAL(10, 2),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);

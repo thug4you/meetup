@@ -297,4 +297,81 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// Обновление встречи (только для создателя)
+router.put('/:id', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user_id = req.user.id;
+    const { title, description, category, dateTime, duration, maxParticipants, placeId, budget } = req.body;
+
+    // Проверяем создателя
+    const meeting = await pool.query(
+      'SELECT organizer_id FROM meetings WHERE id = $1',
+      [id]
+    );
+
+    if (meeting.rows.length === 0) {
+      return res.status(404).json({ error: 'Встреча не найдена' });
+    }
+
+    if (meeting.rows[0].organizer_id !== user_id) {
+      return res.status(403).json({ error: 'Только организатор может редактировать встречу' });
+    }
+
+    const start_time = new Date(dateTime);
+    if (isNaN(start_time.getTime())) {
+      return res.status(400).json({ error: 'Неверный формат даты и времени' });
+    }
+    const end_time = new Date(start_time.getTime() + (duration || 60) * 60000);
+
+// Если placeId пустой или невалидный, используем null
+      const place_id = placeId && placeId !== '' ? parseInt(placeId) : null;
+
+      const updated = await pool.query(`
+        UPDATE meetings
+        SET title = $1, description = $2, category = $3, start_time = $4, end_time = $5,
+            max_participants = $6, place_id = $7, budget = $8, updated_at = NOW()
+        WHERE id = $9
+        RETURNING *
+      `, [
+        title,
+        description || '',
+        category,
+        start_time,
+        end_time,
+        maxParticipants || 10,
+        place_id,
+      budget || null,
+      id
+    ]);
+
+    await redisClient.del('meetings:all');
+
+    // Возвращаем обновлённую встречу с полными данными
+    const meetingResult = await pool.query(`
+      SELECT m.*, p.name as place_name, p.address, p.latitude, p.longitude,
+             u.name as organizer_name, u.avatar_url as organizer_avatar
+      FROM meetings m
+      LEFT JOIN places p ON m.place_id = p.id
+      LEFT JOIN users u ON m.organizer_id = u.id
+      WHERE m.id = $1
+    `, [id]);
+
+    const participants = await pool.query(`
+      SELECT u.id, u.name, u.avatar_url, u.email, mp.joined_at
+      FROM meeting_participants mp
+      JOIN users u ON mp.user_id = u.id
+      WHERE mp.meeting_id = $1
+    `, [id]);
+
+    res.json({
+      ...meetingResult.rows[0],
+      participants: participants.rows
+    });
+  } catch (err) {
+    console.error('Update meeting error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

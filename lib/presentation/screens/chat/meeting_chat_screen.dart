@@ -22,10 +22,12 @@ class MeetingChatScreen extends StatefulWidget {
 class _MeetingChatScreenState extends State<MeetingChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  late final ChatProvider _chatProvider;
 
   @override
   void initState() {
     super.initState();
+    _chatProvider = context.read<ChatProvider>();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _connectToChat();
     });
@@ -35,9 +37,8 @@ class _MeetingChatScreenState extends State<MeetingChatScreen> {
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
-    // Отключаемся от чата при выходе
-    final chatProvider = context.read<ChatProvider>();
-    chatProvider.disconnect();
+    // Используем сохранённую ссылку вместо context.read
+    _chatProvider.disconnect();
     super.dispose();
   }
 
