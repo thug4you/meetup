@@ -19,6 +19,7 @@ class Meeting {
   final int maxParticipants;
   final double? budget;
   final List<User> participants;
+  final int? participantsCount; // Используется когда участники не загружены
   final User creator;
   final MeetingStatus status;
   final bool isPrivate;
@@ -38,6 +39,7 @@ class Meeting {
     required this.maxParticipants,
     this.budget,
     required this.participants,
+    this.participantsCount,
     required this.creator,
     required this.status,
     this.isPrivate = false,
@@ -47,8 +49,11 @@ class Meeting {
     this.organizerEmail,
   });
   
-  bool get isFull => participants.length >= maxParticipants;
-  int get availableSlots => maxParticipants - participants.length;
+  // Актуальное количество участников (из списка или из счётчика)
+  int get actualParticipantCount => participants.isNotEmpty ? participants.length : (participantsCount ?? 0);
+  
+  bool get isFull => actualParticipantCount >= maxParticipants;
+  int get availableSlots => maxParticipants - actualParticipantCount;
   DateTime get endTime => startTime.add(Duration(minutes: durationMinutes));
   
   factory Meeting.fromJson(Map<String, dynamic> json) {
@@ -156,6 +161,7 @@ class Meeting {
       maxParticipants: maxParticipants,
       budget: _parseNullableDouble(json['budget'] ?? json['meeting_budget']),
       participants: participants,
+      participantsCount: json['participants_count'] as int? ?? participants.length,
       creator: creator,
       status: MeetingStatus.values.firstWhere(
         (e) => e.name == (json['status']?.toString() ?? 'active'),
@@ -200,6 +206,7 @@ class Meeting {
     int? maxParticipants,
     double? budget,
     List<User>? participants,
+    int? participantsCount,
     User? creator,
     MeetingStatus? status,
     bool? isPrivate,
@@ -217,6 +224,7 @@ class Meeting {
       maxParticipants: maxParticipants ?? this.maxParticipants,
       budget: budget ?? this.budget,
       participants: participants ?? this.participants,
+      participantsCount: participantsCount ?? this.participantsCount,
       creator: creator ?? this.creator,
       status: status ?? this.status,
       isPrivate: isPrivate ?? this.isPrivate,

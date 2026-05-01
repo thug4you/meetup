@@ -37,10 +37,18 @@ class MeetingService {
 
       final responseData = response.data;
       final List<dynamic> data = responseData is Map ? (responseData['meetings'] ?? []) : [];
-      return data
+      final meetings = data
           .where((json) => json is Map<String, dynamic>)
           .map((json) => Meeting.fromJson(json as Map<String, dynamic>))
           .toList();
+      
+      // Дополнительный фильтр: исключаем завершённые встречи и встречи, время которых прошло
+      final now = DateTime.now();
+      return meetings.where((m) {
+        final isCompleted = m.status == MeetingStatus.completed;
+        final hasPassed = m.endTime.isBefore(now);
+        return !isCompleted && !hasPassed;
+      }).toList();
     } on DioException catch (e) {
       throw _handleError(e);
     } catch (e) {
@@ -405,6 +413,17 @@ class MeetingService {
       throw _handleError(e);
     } catch (e) {
       throw Exception('Ошибка удаления фото: $e');
+    }
+  }
+
+  // Создать уведомление о завершённой встречи
+  Future<void> createMeetingEndedNotification(String meetingId) async {
+    try {
+      await _apiService.post('/api/notifications/meeting-ended/$meetingId', data: {});
+    } on DioException catch (e) {
+      throw _handleError(e);
+    } catch (e) {
+      throw Exception('Ошибка создания уведомления: $e');
     }
   }
 }

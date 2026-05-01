@@ -8,6 +8,19 @@ const { authMiddleware, optionalAuth } = require('../middleware/auth');
 // Получить все встречи (публичный доступ с опциональной авторизацией)
 router.get('/', optionalAuth, async (req, res) => {
   try {
+    // Автоматически завершаем прошедшие встречи
+    const completedResult = await pool.query(`
+      UPDATE meetings 
+      SET status = 'completed'
+      WHERE status = 'active' AND end_time <= NOW()
+      RETURNING id
+    `);
+    
+    if (completedResult.rows.length > 0) {
+      console.log(`✓ Завершено встреч: ${completedResult.rows.length}`, completedResult.rows.map(r => r.id));
+      await redisClient.del('meetings:all');
+    }
+
     // Попытка получить из кеша Redis
     const cached = await redisClient.get('meetings:all');
     
@@ -26,7 +39,7 @@ router.get('/', optionalAuth, async (req, res) => {
       FROM meetings m
       LEFT JOIN places p ON m.place_id = p.id
       LEFT JOIN users u ON m.organizer_id = u.id
-      WHERE m.status = 'active'
+      WHERE m.status = 'active' AND m.end_time > NOW()
       ORDER BY m.start_time ASC
     `);
 
@@ -46,6 +59,13 @@ router.get('/', optionalAuth, async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // Обновляем статус встречи если она прошла
+    await pool.query(`
+      UPDATE meetings 
+      SET status = 'completed'
+      WHERE id = $1 AND status = 'active' AND end_time <= NOW()
+    `, [id]);
     
     const result = await pool.query(`
       SELECT m.*, p.name as place_name, p.address, p.latitude, p.longitude,
@@ -144,7 +164,17 @@ router.post('/', authMiddleware, async (req, res) => {
     // Очистить кеш
     await redisClient.del('meetings:all');
 
-    res.status(201).json(meeting);
+    // Получить встречу со всеми данными о месте (как в GET /:id)
+    const fullMeeting = await pool.query(`
+      SELECT m.*, p.name as place_name, p.address, p.latitude, p.longitude,
+             u.name as organizer_name, u.avatar_url as organizer_avatar
+      FROM meetings m
+      LEFT JOIN places p ON m.place_id = p.id
+      LEFT JOIN users u ON m.organizer_id = u.id
+      WHERE m.id = $1
+    `, [meeting.id]);
+
+    res.status(201).json(fullMeeting.rows[0]);
   } catch (err) {
     console.error('Ошибка создания встречи:', err);
     res.status(500).json({ error: err.message });
@@ -160,17 +190,27 @@ router.post('/:id/join', authMiddleware, async (req, res) => {
 
     // Проверяем, существует ли встреча и не превышен ли лимит участников
     const meetingCheck = await pool.query(`
-      SELECT m.id, m.max_participants, 
+      SELECT m.id, m.max_participants, m.status, m.end_time,
              (SELECT COUNT(*) FROM meeting_participants WHERE meeting_id = m.id) as current_participants
       FROM meetings m
-      WHERE m.id = $1 AND m.status = 'active'
+      WHERE m.id = $1
     `, [id]);
 
     if (meetingCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Встреча не найдена или неактивна' });
+      return res.status(404).json({ error: 'Встреча не найдена' });
     }
 
     const meeting = meetingCheck.rows[0];
+    
+    // Проверяем статус и время завершения
+    if (meeting.status !== 'active') {
+      return res.status(400).json({ error: 'Встреча неактивна' });
+    }
+    
+    if (new Date(meeting.end_time) <= new Date()) {
+      return res.status(400).json({ error: 'Встреча уже завершена' });
+    }
+
     if (meeting.max_participants && meeting.current_participants >= meeting.max_participants) {
       return res.status(400).json({ error: 'Превышен лимит участников' });
     }

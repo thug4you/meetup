@@ -112,13 +112,42 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
         _meeting = meeting;
         _isLoading = false;
       });
+      
       // Инициализируем карту после загрузки данных
       _initializeMap();
+      
+      // Создаём уведомление если встреча завершена
+      _createMeetingEndedNotificationIfNeeded();
     } catch (e) {
       setState(() {
         _error = e.toString();
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _createMeetingEndedNotificationIfNeeded() async {
+    if (_meeting == null) return;
+    
+    final now = DateTime.now();
+    final endTime = _meeting!.startTime.add(Duration(minutes: _meeting!.durationMinutes));
+    
+    // Если встреча завершена, создаём уведомление
+    if (now.isAfter(endTime)) {
+      try {
+        final authProvider = context.read<AuthProvider>();
+        final currentUser = authProvider.currentUser;
+        
+        // Проверяем, что это участник встречи
+        final isParticipant = _meeting!.participants.any((p) => p.id == currentUser?.id);
+        if (!isParticipant) return;
+        
+        // Отправляем запрос на создание уведомления
+        await _meetingService.createMeetingEndedNotification(_meeting!.id);
+      } catch (e) {
+        // Ошибка при создании уведомления, но это не критично
+        print('Ошибка при создании уведомления о завершённой встречи: $e');
+      }
     }
   }
 

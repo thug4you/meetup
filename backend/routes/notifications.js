@@ -123,4 +123,55 @@ router.delete('/clear-all', authMiddleware, async (req, res) => {
   }
 });
 
+// Создать уведомление о завершённой встречи для пользователя (требуется авторизация)
+router.post('/meeting-ended/:meetingId', authMiddleware, async (req, res) => {
+  try {
+    const { meetingId } = req.params;
+    const userId = req.user.id;
+
+    // Проверяем, что пользователь участник встречи
+    const participantCheck = await pool.query(`
+      SELECT 1 FROM meeting_participants 
+      WHERE meeting_id = $1 AND user_id = $2
+    `, [meetingId, userId]);
+
+    if (participantCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'Вы не участник этой встречи' });
+    }
+
+    // Получаем информацию о встречи
+    const meetingResult = await pool.query(`
+      SELECT title FROM meetings WHERE id = $1
+    `, [meetingId]);
+
+    if (meetingResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Встреча не найдена' });
+    }
+
+    const meetingTitle = meetingResult.rows[0].title;
+
+    // Проверяем, не создано ли уже уведомление об этом
+    const existingNotif = await pool.query(`
+      SELECT id FROM notifications 
+      WHERE user_id = $1 AND type = 'meeting_ended' AND reference_type = 'meeting' AND reference_id = $2
+    `, [userId, meetingId]);
+
+    if (existingNotif.rows.length > 0) {
+      return res.status(200).json({ message: 'Уведомление уже существует' });
+    }
+
+    // Создаём уведомление
+    const result = await pool.query(`
+      INSERT INTO notifications (user_id, title, content, type, reference_type, reference_id)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *
+    `, [userId, 'Встреча завершена', `Ваша встреча "${meetingTitle}" завершилась. Оставьте отзыв о месте!`, 'meeting_ended', 'meeting', meetingId]);
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Ошибка создания уведомления о завершённой встречи:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

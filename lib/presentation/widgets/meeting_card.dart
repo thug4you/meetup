@@ -151,7 +151,7 @@ class MeetingCard extends StatelessWidget {
                   
                   // Счётчик участников
                   Text(
-                    '${meeting.participants.length}/${meeting.maxParticipants}',
+                    '${meeting.actualParticipantCount}/${meeting.maxParticipants}',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: AppTheme.textSecondaryColor,
                           fontWeight: FontWeight.w600,
